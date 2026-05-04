@@ -1,17 +1,26 @@
-    const Card = () => {
+    import logo from "../images/logo.png";
+    import { FaShoppingCart, FaSearch } from "react-icons/fa";
+    import "./NavBar.css";
+
+    const NavBar = () => {
     return (
-    <nav>
-        <div><img src="./images/LOGO Skins market.png"></img></div>
-        <ul>
-            <li>INICIO</li>
-            <li>COMPRAR</li>
-            <li>VENDER</li>
-            <li>COMO FUNCIONA</li>
-            <li>SOPORTE</li>
+    <nav className="navbar navbar-expand-lg d-flex justify-content-around custom-navbar">
+        <a href="#"><div><img src={logo} alt="logo" width="100"/></div></a>
+        <ul className="navbar-nav">
+            <li><a className="nav-link blanco" href="#">Inicio</a></li>
+            <li><a className="nav-link blanco" href="#">Comprar</a></li>
+            <li><a className="nav-link blanco" href="#">Vender</a></li>
+            <li><a className="nav-link blanco" href="#">Como funciona</a></li>
+            <li><a className="nav-link blanco" href="#">Soporte</a></li>
+            
         </ul>
-        <div></div>
+        <div className="column d-flex justify-content-between align-items-center custom-column">
+            <a href="#"><FaSearch size={20} className="blanco" /></a>
+            <a href="#"><FaShoppingCart size={20} className="blanco" /></a>
+            <button className="btn btn-warning " type="button">Iniciar sesion</button>
+        </div>
     </nav>
     );
 };
 
-export default Card
+export default NavBar;

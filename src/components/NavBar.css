@@ -1,0 +1,16 @@
+.custom-navbar {
+    background-color: #090223; /* Color de fondo claro */
+    
+
+
+
+}
+.blanco{
+    color: white; /* Color de los enlaces */
+}
+.blanco:hover {
+    color: #ffca2c; /* Color de los enlaces al pasar el mouse */
+}
+.custom-column {
+    width: 20%; /* Ancho de la columna */
+}
