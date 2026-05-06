@@ -1,9 +1,5 @@
 .custom-navbar {
     background-color: #090223; /* Color de fondo claro */
-    
-
-
-
 }
 .blanco{
     color: white; /* Color de los enlaces */
@@ -13,4 +9,21 @@
 }
 .custom-column {
     width: 20%; /* Ancho de la columna */
+}
+#logo {
+  content: "";
+  inset: 0;
+
+  background-image: url("../images/image.png");
+  background-size: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  opacity: 1;
+  z-index: 0;
+}
+
+#logo img {
+  position: relative;
+  z-index: 1;
 }

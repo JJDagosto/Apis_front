@@ -5,7 +5,7 @@
     const NavBar = () => {
     return (
     <nav className="navbar navbar-expand-lg d-flex justify-content-around custom-navbar">
-        <a href="#"><div><img src={logo} alt="logo" width="100"/></div></a>
+        <a href="#"><div id="logo"><img src={logo} alt="logo" width="100"/></div></a>
         <ul className="navbar-nav">
             <li><a className="nav-link blanco" href="#">Inicio</a></li>
             <li><a className="nav-link blanco" href="#">Comprar</a></li>
