@@ -27,3 +27,9 @@
   position: relative;
   z-index: 1;
 }
+navbar-nav{
+    position: ce;
+}
+.nav-link{
+  cursor: pointer;
+}

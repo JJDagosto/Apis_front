@@ -1,20 +1,29 @@
-
 import './App.css'
-import MyComponent from './components/MyComponent'
-import Card from './components/Card'
-import NavBar from './components/NavBar'
-import CardBar from './components/CardBar'
+import { useState } from 'react'
 
+import NavBar from './components/NavBar'
+
+import Home from './pages/Home'
+import Catalogo from './pages/Catalogo'
 
 function App() {
 
+  const [currentPage, setCurrentPage] = useState("home");
+
   return (
-  <>
-   <NavBar/>
-   <br/>
-     <CardBar titulo="Karambit Skins" />
-          
-  </>
+    <>
+      <NavBar setCurrentPage={setCurrentPage} />
+
+      {
+        currentPage === "home" &&
+        <Home />
+      }
+
+      {
+        currentPage === "catalogo" &&
+        <Catalogo />
+      }
+    </>
   )
 }
 

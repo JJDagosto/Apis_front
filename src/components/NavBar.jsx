@@ -2,13 +2,14 @@
     import { FaShoppingCart, FaSearch } from "react-icons/fa";
     import "./NavBar.css";
 
-    const NavBar = () => {
+    
+    const NavBar = ({setCurrentPage}) => {
     return (
     <nav className="navbar navbar-expand-lg d-flex justify-content-around custom-navbar">
         <a href="#"><div id="logo"><img src={logo} alt="logo" width="100"/></div></a>
         <ul className="navbar-nav">
-            <li><a className="nav-link blanco" href="#">Inicio</a></li>
-            <li><a className="nav-link blanco" href="#">Comprar</a></li>
+            <li><a className="nav-link blanco" onClick={() => setCurrentPage('home')}>Inicio</a></li>
+            <li><a className="nav-link blanco" onClick={() => setCurrentPage('catalogo')}>Comprar</a></li>
             <li><a className="nav-link blanco" href="#">Vender</a></li>
             <li><a className="nav-link blanco" href="#">Como funciona</a></li>
             <li><a className="nav-link blanco" href="#">Soporte</a></li>
