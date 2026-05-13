@@ -1,14 +1,20 @@
 import './App.css'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import NavBar from './components/NavBar'
 
 import Home from './pages/Home'
 import Catalogo from './pages/Catalogo'
+import Prueba from './pages/Prueba'
 
 function App() {
 
   const [currentPage, setCurrentPage] = useState("home");
+
+
+  
+
+
 
   return (
     <>
@@ -22,6 +28,10 @@ function App() {
       {
         currentPage === "catalogo" &&
         <Catalogo />
+      }
+      {
+        currentPage === "prueba" &&
+        <Prueba />
       }
     </>
   )

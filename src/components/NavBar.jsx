@@ -11,7 +11,7 @@
             <li><a className="nav-link blanco" onClick={() => setCurrentPage('home')}>Inicio</a></li>
             <li><a className="nav-link blanco" onClick={() => setCurrentPage('catalogo')}>Comprar</a></li>
             <li><a className="nav-link blanco" href="#">Vender</a></li>
-            <li><a className="nav-link blanco" href="#">Como funciona</a></li>
+            <li><a className="nav-link blanco" onClick={() => setCurrentPage('prueba')}>Como funciona</a></li>
             <li><a className="nav-link blanco" href="#">Soporte</a></li>
             
         </ul>
