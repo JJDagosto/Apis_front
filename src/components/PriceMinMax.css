@@ -1,0 +1,10 @@
+.body{
+    width: 100%;
+}
+.body div{
+    width: 70%;
+}
+.body div input{
+    width: 100%;
+    color: white;
+}

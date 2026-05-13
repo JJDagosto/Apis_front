@@ -1,0 +1,32 @@
+body{
+    color: white;
+}
+.row{
+    
+    width: 100%;
+    padding: 0px 5%;
+}
+div{
+    /*border: 2px solid white;*/
+}
+
+li{
+    list-style: none;
+    text-align: left;
+    font-size: 0.875rem;
+}
+ul{
+    padding-left: 0px;
+}
+#ordenar{
+  border: none;
+  outline: none;
+  appearance: none;
+  background: transparent;
+
+}
+
+select option {
+  background: white;
+  color: black;
+}
