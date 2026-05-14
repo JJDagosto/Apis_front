@@ -7,20 +7,17 @@ import PruebaDumb from '../components/PruebaDumb.jsx'
 
 function Prueba({id, title}) {
 
-    const [count, setCount] = useState(0);
-    useEffect(()=>{
-        document.title = 'count ' + count;
-    },[count])
+    
 
-    const [posts, setPosts] = useState([])
-    console.log(posts)
+    const [skins, setSkins] = useState([])
+    console.log(skins)
 
 
     useEffect(()=>{
-    const URL= 'https://jsonplaceholder.typicode.com/' //api
-    fetch('URL'+'posts') 
+    const URL= 'http://localhost:4003' //api
+    fetch(`${URL}/skins/get/all`)
     .then((response)=>response.json())
-    .then((data) => {setPosts(data)})
+    .then((data) => {setSkins(data.data)})
     .catch((error)=>(console.error('error')))
   },[])
 
@@ -29,12 +26,15 @@ function Prueba({id, title}) {
 
   return (
     <>
-      <span>Contador {count}</span>
-    <button onClick={()=> setCount(count+1) }>Incrementar</button>
-    {posts.map((post)=>(
-        <PruebaDumb key={post.id}
-        title={post.title}
-        id={post.id}/>
+    {skins.map((skin)=>(
+        <Card key={skin.id}
+        nombreSkin={skin.name}
+        id={skin.id}
+        arma={skin.catalogo.weaponName}
+        estado={skin.exterior}
+        precio={skin.price}
+        imagen={skin.imageUrl}
+        />
     ))}
     </>
   )
