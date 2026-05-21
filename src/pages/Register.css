@@ -1,0 +1,80 @@
+.register-page {
+  align-items: center;
+  color: white;
+  display: flex;
+  justify-content: center;
+  min-height: calc(100vh - 96px);
+  padding: 32px 16px;
+}
+
+.register-form {
+  background-color: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+  padding: 28px;
+  width: 100%;
+}
+
+.register-form h1 {
+  font-size: 1.6rem;
+  margin: 0 0 8px;
+}
+
+.register-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.register-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.register-form input {
+  background-color: #12072f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: white;
+  padding: 10px 12px;
+}
+
+.register-form input:focus {
+  border-color: #ffca2c;
+  outline: none;
+}
+
+.register-form button {
+  background-color: #ffca2c;
+  border: 1px solid #ffca2c;
+  border-radius: 6px;
+  color: #0c0524;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+.register-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.register-secondary {
+  background-color: transparent !important;
+  color: #ffca2c !important;
+}
+
+.register-error {
+  color: #ff7b7b;
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .register-grid {
+    grid-template-columns: 1fr;
+  }
+}

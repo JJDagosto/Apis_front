@@ -33,3 +33,35 @@ navbar-nav{
 .nav-link{
   cursor: pointer;
 }
+.nav-user {
+  align-items: center;
+  color: white;
+  display: flex;
+  gap: 10px;
+}
+
+.nav-user span {
+  font-size: 0.9rem;
+}
+
+.nav-auth-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-username {
+  background: transparent;
+  border: 0;
+  color: white;
+  padding: 0;
+}
+
+.nav-username:hover {
+  color: #ffca2c;
+}
+
+.nav-icon-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}

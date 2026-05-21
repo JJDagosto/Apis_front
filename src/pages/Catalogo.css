@@ -30,3 +30,27 @@ select option {
   background: white;
   color: black;
 }
+.catalog-filters .filter-item {
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.catalog-filters .filter-item:hover,
+.catalog-filters .filter-item.active {
+  background-color: #090223;
+  color: #ffca2c;
+}
+
+
+.catalog-message {
+  color: white;
+  font-size: 1rem;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.catalog-success {
+  color: #3bd17f;
+  margin-bottom: 14px;
+}
