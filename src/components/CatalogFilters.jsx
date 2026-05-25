@@ -27,12 +27,62 @@ const categoryFilters = [
   { label: "Gloves", value: "Gloves" },
 ]
 
-function CatalogFilters({ filters, setFilter, setPriceFilter }) {
+// Opciones de orden. El value lo interpreta Catalogo.jsx al ordenar el array.
+const sortOptions = [
+  { label: "Relevancia", value: "" },
+  { label: "Precio: menor a mayor", value: "precio_asc" },
+  { label: "Precio: mayor a menor", value: "precio_desc" },
+  { label: "Nombre: A-Z", value: "nombre_az" },
+  { label: "Nombre: Z-A", value: "nombre_za" },
+]
+
+function CatalogFilters({
+  filters,
+  setFilter,
+  setPriceFilter,
+  toggleBoolFilter,
+  orden,
+  setOrden,
+}) {
   const filterClass = (filterName, value) =>
     filters[filterName] === value ? "filter-item active" : "filter-item"
 
+  // Para toggles booleanos (intercambiable/vendible) el "active" depende de true/false.
+  const boolFilterClass = (filterName) =>
+    filters[filterName] ? "filter-item active" : "filter-item"
+
   return (
     <div className="d-flex flex-column align-items-start catalog-filters">
+      <h6>Ordenar</h6>
+      <select
+        id="ordenar"
+        className="text-light mb-3"
+        value={orden}
+        onChange={(e) => setOrden(e.target.value)}
+      >
+        {sortOptions.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      <h6>Disponibilidad</h6>
+      <ul>
+        <li
+          className={boolFilterClass("intercambiable")}
+          onClick={() => toggleBoolFilter("intercambiable")}
+        >
+          Intercambiable
+        </li>
+        <li
+          className={boolFilterClass("vendible")}
+          onClick={() => toggleBoolFilter("vendible")}
+        >
+          Vendible
+        </li>
+      </ul>
+
       <h6>Float</h6>
       <ul>
         {exteriorFilters.map((exterior) => (

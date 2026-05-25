@@ -1,0 +1,90 @@
+.info-page {
+  color: #fff;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.info-page h1 {
+  font-size: 1.9rem;
+  margin-bottom: 8px;
+}
+
+.info-lead {
+  color: #b9b9c6;
+  margin-bottom: 28px;
+}
+
+.info-card {
+  background: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.info-card h2 {
+  font-size: 1.15rem;
+  margin-bottom: 10px;
+  color: #ffca2c;
+}
+
+.info-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: paso;
+}
+
+.info-steps li {
+  position: relative;
+  padding: 10px 0 10px 44px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.info-steps li:last-child {
+  border-bottom: none;
+}
+
+.info-steps li::before {
+  counter-increment: paso;
+  content: counter(paso);
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  background: #ffca2c;
+  color: #0c0524;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.info-card p {
+  color: #d8d8e2;
+  line-height: 1.55;
+}
+
+.info-card strong {
+  color: #fff;
+}
+
+.info-contact {
+  color: #ffca2c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.info-faq dt {
+  font-weight: 700;
+  margin-top: 14px;
+}
+
+.info-faq dd {
+  margin: 4px 0 0;
+  color: #b9b9c6;
+}

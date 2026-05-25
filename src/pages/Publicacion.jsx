@@ -11,7 +11,7 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCatalogo }) {
+function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCatalogo, onCartChange }) {
   const [skin, setSkin] = useState(null)
   const [loading, setLoading] = useState(true)
   const [addingCart, setAddingCart] = useState(false)
@@ -51,6 +51,7 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
     try {
       await agregarAlCarrito(skin.id, 1)
       setCartMessage("Skin agregada al carrito.")
+      onCartChange?.() // actualiza el badge del navbar
     } catch (error) {
       setError(error.message)
     } finally {

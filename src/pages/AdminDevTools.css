@@ -1,0 +1,180 @@
+.admin-dev-page {
+  color: white;
+  min-height: calc(100vh - 96px);
+  padding: 28px;
+}
+
+.admin-dev-panel {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.admin-dev-header {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.admin-dev-header h1 {
+  font-size: 1.8rem;
+  margin: 0 0 6px;
+}
+
+.admin-dev-header p {
+  color: rgba(255, 255, 255, 0.74);
+  margin: 0;
+}
+
+.admin-dev-search {
+  align-items: flex-end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  margin-bottom: 20px;
+}
+
+.admin-dev-search label,
+.admin-dev-create label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-dev-search input,
+.admin-dev-create input {
+  background-color: #12072f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: white;
+  padding: 10px 12px;
+}
+
+.admin-dev-search input:focus,
+.admin-dev-create input:focus {
+  border-color: #ffca2c;
+  outline: none;
+}
+
+.admin-dev-header button,
+.admin-dev-search button,
+.admin-dev-create button {
+  align-items: center;
+  background-color: #ffca2c;
+  border: 1px solid #ffca2c;
+  border-radius: 6px;
+  color: #0c0524;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
+.admin-dev-header button {
+  background-color: transparent;
+  color: #ffca2c;
+}
+
+.admin-dev-layout {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.admin-dev-results {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.catalog-result {
+  align-items: flex-start;
+  background-color: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 210px;
+  padding: 12px;
+  text-align: left;
+}
+
+.catalog-result.selected {
+  border-color: #ffca2c;
+  box-shadow: 0 0 0 2px rgba(255, 202, 44, 0.18);
+}
+
+.catalog-result img {
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  width: 100%;
+}
+
+.catalog-result span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+}
+
+.catalog-result strong {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.admin-dev-create {
+  background-color: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}
+
+.admin-dev-create h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.admin-dev-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-dev-check {
+  align-items: center !important;
+  flex-direction: row !important;
+}
+
+.admin-dev-check input {
+  width: 18px;
+}
+
+.admin-dev-error {
+  color: #ff7b7b;
+  margin: 0;
+}
+
+.admin-dev-success {
+  color: #78f0a4;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .admin-dev-layout,
+  .admin-dev-search {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dev-create {
+    position: static;
+  }
+}

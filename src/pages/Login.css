@@ -61,6 +61,12 @@
   color: #ff7b7b;
   margin: 0;
 }
+
+.login-success {
+  color: #78f0a4;
+  margin: 0;
+}
+
 .login-secondary {
   background-color: transparent !important;
   color: #ffca2c !important;

@@ -14,7 +14,7 @@ const getPasswordError = (password, passwordRepeat) => {
   return ""
 }
 
-function Register({ onRegisterSuccess, goToLogin }) {
+function Register({ goToLogin }) {
   const [form, setForm] = useState({
     username: "",
     firstName: "",
@@ -25,6 +25,7 @@ function Register({ onRegisterSuccess, goToLogin }) {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [message, setMessage] = useState("")
 
   const updateField = (field, value) => {
     setForm((currentForm) => ({
@@ -36,6 +37,7 @@ function Register({ onRegisterSuccess, goToLogin }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError("")
+    setMessage("")
 
     if (!isValidEmail(form.email)) {
       setError("Ingresa un email valido.")
@@ -51,7 +53,7 @@ function Register({ onRegisterSuccess, goToLogin }) {
     setLoading(true)
 
     try {
-      await register({
+      const msg = await register({
         username: form.username.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -59,7 +61,7 @@ function Register({ onRegisterSuccess, goToLogin }) {
         password: form.password,
         passwordRepeat: form.passwordRepeat,
       })
-      await onRegisterSuccess()
+      setMessage(msg || "Cuenta creada. Verifica tu email antes de iniciar sesion.")
     } catch (error) {
       setError(error.message)
     } finally {
@@ -141,6 +143,7 @@ function Register({ onRegisterSuccess, goToLogin }) {
         </div>
 
         {error && <p className="register-error">{error}</p>}
+        {message && <p className="register-success">{message}</p>}
 
         <button type="submit" disabled={loading}>
           {loading ? "Creando cuenta..." : "Registrarse"}

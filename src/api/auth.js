@@ -30,8 +30,7 @@ export const register = async ({
     }),
   })
 
-  saveToken(response.access_token)
-  return response.access_token
+  return response.message
 }
 
 export const getCurrentUser = async () => {
@@ -51,6 +50,40 @@ export const updateCurrentUser = async (profileData) => {
   }
 
   return response.data
+}
+
+// Pide el mail de recuperacion. El back SIEMPRE responde OK (no revela si el email existe).
+export const forgotPassword = async (email) => {
+  const response = await apiRequest("/api/v1/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  })
+  return response.message
+}
+
+export const resendVerification = async (email) => {
+  const response = await apiRequest("/api/v1/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  })
+  return response.message
+}
+
+export const verifyEmail = async (token) => {
+  const response = await apiRequest("/api/v1/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  })
+  return response.message
+}
+
+// Cambia la contraseña usando el token que llego por mail.
+export const resetPassword = async ({ token, password, passwordRepeat }) => {
+  const response = await apiRequest("/api/v1/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password, passwordRepeat }),
+  })
+  return response.message
 }
 
 export const logout = () => {

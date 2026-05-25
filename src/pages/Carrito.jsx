@@ -14,12 +14,13 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function Carrito({ currentUser, goToLogin, goToCatalogo }) {
+function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartChange }) {
   const [carrito, setCarrito] = useState(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [cupon, setCupon] = useState("") // cupon opcional que se pasa al checkout
 
   const loadCart = async () => {
     setError("")
@@ -63,6 +64,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo }) {
     try {
       const updated = await actualizarCantidadCarrito(itemId, cantidad)
       setCarrito(updated)
+      onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -78,6 +80,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo }) {
     try {
       const updated = await eliminarItemCarrito(itemId)
       setCarrito(updated)
+      onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -94,6 +97,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo }) {
       const updated = await vaciarCarrito()
       setCarrito(updated)
       setSuccess("Carrito vaciado.")
+      onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -193,10 +197,25 @@ function Carrito({ currentUser, goToLogin, goToCatalogo }) {
               <span>Total</span>
               <strong>${total.toFixed(2)}</strong>
             </div>
-            <button type="button" disabled>
+
+            <label className="cart-cupon">
+              Cupon (opcional)
+              <input
+                type="text"
+                value={cupon}
+                onChange={(e) => setCupon(e.target.value.trim())}
+                placeholder="Ingresa un codigo"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => goToCheckout(cupon)}
+              disabled={updating}
+            >
               Continuar compra
             </button>
-            <small>El checkout lo conectamos despues.</small>
+            <small>El descuento del cupon se valida al crear la orden.</small>
           </aside>
         </section>
       )}

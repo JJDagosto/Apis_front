@@ -1,0 +1,262 @@
+.pub-page {
+  color: #fff;
+  padding: 32px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pub-header h1 {
+  margin-bottom: 4px;
+}
+
+.pub-header p {
+  color: #b9b9c6;
+}
+
+.pub-section {
+  margin-top: 28px;
+}
+
+.pub-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #2a2a3d;
+  padding-bottom: 8px;
+}
+
+.pub-message {
+  color: #b9b9c6;
+}
+
+.pub-error {
+  color: #ff6b6b;
+  margin: 10px 0;
+}
+
+.pub-success {
+  color: #3bd17f;
+  margin: 10px 0;
+}
+
+.pub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.pub-card {
+  background: #15131f;
+  border: 1px solid #2a2a3d;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pub-image-wrap {
+  position: relative;
+  background: #0c0a15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.pub-image-wrap img {
+  max-width: 100%;
+  max-height: 130px;
+  object-fit: contain;
+}
+
+.pub-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.badge-publicada { background: #1f8a4c; }
+.badge-pausada   { background: #b58900; }
+.badge-reservada { background: #2d6cdf; }
+.badge-vendida   { background: #7c3aed; }
+.badge-default   { background: #555; }
+
+.pub-card-body {
+  padding: 12px 14px;
+  flex: 1;
+}
+
+.pub-weapon {
+  font-size: 0.75rem;
+  color: #8b8b9c;
+  text-transform: uppercase;
+}
+
+.pub-card-body h2 {
+  font-size: 1rem;
+  margin: 4px 0;
+}
+
+.pub-exterior {
+  font-size: 0.8rem;
+  color: #b9b9c6;
+  margin-bottom: 8px;
+}
+
+.pub-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pub-price-row strong {
+  font-size: 1.1rem;
+  color: #ffca2c;
+}
+
+.pub-old-price {
+  text-decoration: line-through;
+  color: #8b8b9c;
+  font-size: 0.85rem;
+}
+
+.pub-flags {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.pub-flags span {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.flag-on  { background: #1f8a4c33; color: #5ad18a; border: 1px solid #1f8a4c; }
+.flag-off { background: #44444422; color: #8b8b9c; border: 1px solid #444; }
+
+.pub-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #2a2a3d;
+}
+
+.pub-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: #fff;
+}
+
+.pub-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pub-btn-edit  { background: #2d2d44; }
+.pub-btn-pause { background: #b58900; }
+.pub-btn-play  { background: #1f8a4c; }
+.pub-btn-save  { width: 100%; background: #ffca2c; color: #1a1a1a; font-weight: 600; }
+
+/* Estado vacio / no logueado */
+.pub-empty {
+  text-align: center;
+  margin-top: 60px;
+}
+
+.pub-empty button {
+  margin-top: 12px;
+  background: #ffca2c;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Modal de edicion */
+.pub-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.pub-modal {
+  position: relative;
+  background: #15131f;
+  border: 1px solid #2a2a3d;
+  border-radius: 14px;
+  padding: 24px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pub-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #b9b9c6;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.pub-modal-name {
+  color: #b9b9c6;
+  margin-top: -6px;
+}
+
+.pub-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #d8d8e2;
+}
+
+.pub-modal input[type="number"] {
+  background: #0c0a15;
+  border: 1px solid #2a2a3d;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #fff;
+}
+
+.pub-modal-toggles {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0;
+}
+
+.pub-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  cursor: pointer;
+}
+
+.pub-checkbox input {
+  width: 16px;
+  height: 16px;
+}
