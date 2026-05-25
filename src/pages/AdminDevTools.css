@@ -178,3 +178,270 @@
     position: static;
   }
 }
+
+.admin-dev-kicker {
+  color: #ffca2c;
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.admin-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.admin-stats div,
+.admin-card {
+  background-color: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.admin-stats div {
+  padding: 16px;
+}
+
+.admin-stats span,
+.admin-section-header p,
+.admin-row span,
+.admin-coupon-row span,
+.admin-mini-list p {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.admin-stats strong {
+  display: block;
+  font-size: 1.7rem;
+  line-height: 1.1;
+  margin-top: 6px;
+}
+
+.admin-dashboard {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+}
+
+.admin-card {
+  padding: 18px;
+}
+
+.admin-wide {
+  grid-row: span 2;
+}
+
+.admin-section-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.admin-section-header h2,
+.admin-mini-list h2 {
+  font-size: 1.18rem;
+  margin: 0 0 4px;
+}
+
+.admin-section-header input,
+.admin-coupon-form input,
+.admin-dev-search.compact input,
+.admin-create-skin input {
+  background-color: #12072f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: white;
+  min-height: 40px;
+  padding: 9px 11px;
+}
+
+.admin-section-header input:focus,
+.admin-coupon-form input:focus,
+.admin-dev-search.compact input:focus,
+.admin-create-skin input:focus {
+  border-color: #ffca2c;
+  outline: none;
+}
+
+.admin-table,
+.admin-coupon-list,
+.admin-catalog-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-row,
+.admin-coupon-row {
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 10px;
+}
+
+.admin-row {
+  grid-template-columns: 54px minmax(0, 1fr) auto auto auto;
+}
+
+.admin-row img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  width: 54px;
+}
+
+.admin-row strong,
+.admin-coupon-row strong {
+  display: block;
+}
+
+.admin-status {
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+
+.admin-status.on {
+  background: rgba(120, 240, 164, 0.14);
+  color: #78f0a4;
+}
+
+.admin-status.off {
+  background: rgba(255, 123, 123, 0.14);
+  color: #ff7b7b;
+}
+
+.admin-row button,
+.admin-coupon-row button,
+.admin-coupon-form button,
+.admin-dev-search.compact button,
+.admin-create-skin button {
+  align-items: center;
+  background-color: #ffca2c;
+  border: 1px solid #ffca2c;
+  border-radius: 6px;
+  color: #0c0524;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 12px;
+}
+
+.admin-row button:disabled,
+.admin-coupon-row button:disabled,
+.admin-coupon-form button:disabled,
+.admin-dev-search.compact button:disabled,
+.admin-create-skin button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.admin-coupon-form,
+.admin-create-skin {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 90px;
+  margin-bottom: 16px;
+}
+
+.admin-coupon-form {
+  grid-template-columns: 1fr 88px 1fr;
+}
+
+.admin-coupon-form label,
+.admin-coupon-form button,
+.admin-create-skin button {
+  grid-column: span 1;
+}
+
+.admin-coupon-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-coupon-row button {
+  background: transparent;
+  color: #ff7b7b;
+  border-color: rgba(255, 123, 123, 0.55);
+}
+
+.admin-dev-search.compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.admin-catalog-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: white;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 52px minmax(0, 0.45fr) minmax(0, 1fr);
+  padding: 8px;
+  text-align: left;
+}
+
+.admin-catalog-item.selected {
+  border-color: #ffca2c;
+  box-shadow: 0 0 0 2px rgba(255, 202, 44, 0.18);
+}
+
+.admin-catalog-item img {
+  aspect-ratio: 1;
+  object-fit: contain;
+  width: 52px;
+}
+
+.admin-create-skin {
+  margin-bottom: 0;
+  margin-top: 14px;
+}
+
+.admin-mini-list p {
+  margin: 8px 0 0;
+}
+
+.admin-dev-message {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+@media (max-width: 1000px) {
+  .admin-dashboard,
+  .admin-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-wide {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-dashboard,
+  .admin-stats,
+  .admin-row,
+  .admin-coupon-form,
+  .admin-dev-search.compact,
+  .admin-create-skin,
+  .admin-section-header {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-section-header {
+    display: grid;
+  }
+}

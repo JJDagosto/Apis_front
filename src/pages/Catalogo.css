@@ -6,9 +6,7 @@ body{
     width: 100%;
     padding: 0px 5%;
 }
-div{
-    /*border: 2px solid white;*/
-}
+
 
 li{
     list-style: none;
@@ -42,7 +40,6 @@ select option {
   color: #ffca2c;
 }
 
-
 .catalog-message {
   color: white;
   font-size: 1rem;
@@ -53,4 +50,14 @@ select option {
 .catalog-success {
   color: #3bd17f;
   margin-bottom: 14px;
+}
+
+select {
+  background: transparent;
+  color: #ffca2c;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  outline: none;
+  
 }

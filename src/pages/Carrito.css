@@ -1,4 +1,4 @@
-.cart-page {
+﻿.cart-page {
   color: white;
   padding: 32px 8% 56px;
 }
@@ -74,13 +74,6 @@
   margin: 3px 0;
 }
 
-.cart-quantity {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-}
-
-.cart-quantity button,
 .cart-remove {
   align-items: center;
   background: transparent;
@@ -93,7 +86,6 @@
   min-width: 34px;
 }
 
-.cart-quantity button:disabled,
 .cart-remove:disabled,
 .cart-clear:disabled,
 .cart-summary button:disabled {
@@ -170,10 +162,9 @@
   .cart-item {
     grid-template-columns: 90px minmax(0, 1fr);
   }
-
-  .cart-quantity,
   .cart-price,
   .cart-remove {
     justify-self: start;
   }
 }
+

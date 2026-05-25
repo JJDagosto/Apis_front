@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FaSyncAlt, FaTag, FaTimes } from "react-icons/fa"
+import { FaPen, FaSyncAlt, FaTag, FaTimes } from "react-icons/fa"
 import { getInventario, publicarInventarioItem, syncInventario } from "../api/inventario"
 import "./InventarioVenta.css"
 
@@ -9,7 +9,7 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function InventarioVenta({ currentUser, goToLogin }) {
+function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublications = [], onMyPublicationsChange }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -98,6 +98,7 @@ function InventarioVenta({ currentUser, goToLogin }) {
     try {
       await publicarInventarioItem(selectedItem.id, { price: parsedPrice })
       setSuccess("Publicacion creada correctamente.")
+      await onMyPublicationsChange?.()
       closePublishModal()
       await loadInventory()
     } catch (error) {
@@ -116,6 +117,30 @@ function InventarioVenta({ currentUser, goToLogin }) {
 
   const canPublish = (item) => {
     return !item.publicado && !item.pending && item.tradable !== false
+  }
+
+  const getPublicationForItem = (item) => {
+    if (!item.publicado) return null
+
+    return myPublications.find((publication) => (
+      publication.active !== false &&
+      item.catalogo?.id &&
+      publication.catalogo?.id === item.catalogo.id
+    )) ?? myPublications.find((publication) => (
+      publication.active !== false &&
+      publication.name === item.name
+    ))
+  }
+
+  const handlePublishedItem = (item) => {
+    const publication = getPublicationForItem(item)
+
+    if (!publication) {
+      setError("No pude encontrar la publicacion asociada. Proba refrescar la pagina o entrar desde Mis publicaciones.")
+      return
+    }
+
+    openPublicacion?.(publication.id)
   }
 
   return (
@@ -173,10 +198,12 @@ function InventarioVenta({ currentUser, goToLogin }) {
                 <span>{getItemStatus(item)}</span>
                 <button
                   type="button"
-                  disabled={!canPublish(item)}
-                  onClick={() => openPublishModal(item)}
+                  className={item.publicado ? "inventory-manage" : ""}
+                  disabled={!item.publicado && !canPublish(item)}
+                  onClick={() => item.publicado ? handlePublishedItem(item) : openPublishModal(item)}
                 >
-                  <FaTag /> Publicar
+                  {item.publicado ? <FaPen /> : <FaTag />}
+                  {item.publicado ? "Administrar" : "Publicar"}
                 </button>
               </div>
             </article>

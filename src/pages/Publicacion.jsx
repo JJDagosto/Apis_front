@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import { FaArrowLeft, FaShoppingCart, FaCreditCard } from "react-icons/fa"
-import { agregarAlCarrito } from "../api/carrito"
+import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-icons/fa"
+import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
+import { despublicarPublicacion, editarPublicacion } from "../api/skins"
 import "./Publicacion.css"
 
 const URL = "http://localhost:4003"
@@ -11,12 +12,26 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCatalogo, onCartChange }) {
+function Publicacion({
+  skinId,
+  currentUser,
+  goToLogin,
+  goToCarrito,
+  volverAlCatalogo,
+  onCartChange,
+  cartItems = [],
+  myPublications = [],
+  onMyPublicationsChange,
+}) {
   const [skin, setSkin] = useState(null)
   const [loading, setLoading] = useState(true)
   const [addingCart, setAddingCart] = useState(false)
+  const [savingOwner, setSavingOwner] = useState(false)
+  const [deactivating, setDeactivating] = useState(false)
+  const [ownerPrice, setOwnerPrice] = useState("")
   const [error, setError] = useState("")
   const [cartMessage, setCartMessage] = useState("")
+  const [ownerMessage, setOwnerMessage] = useState("")
 
   useEffect(() => {
     if (!skinId) {
@@ -26,6 +41,9 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
     }
 
     setLoading(true)
+    setError("")
+    setCartMessage("")
+    setOwnerMessage("")
 
     fetch(`${URL}/skins/get/${skinId}`)
       .then((res) => res.json())
@@ -37,9 +55,21 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
       .finally(() => setLoading(false))
   }, [skinId])
 
-  const handleAddToCart = async () => {
+  useEffect(() => {
+    if (skin?.price != null) {
+      setOwnerPrice(String(skin.price))
+    }
+  }, [skin])
+
+  const cartItem = cartItems.find((item) => item.skin?.id === skin?.id)
+  const isInCart = Boolean(cartItem)
+  const ownPublication = myPublications.find((publication) => publication.id === skin?.id)
+  const isOwnPublication = Boolean(ownPublication)
+
+  const handleCartAction = async () => {
     setError("")
     setCartMessage("")
+    setOwnerMessage("")
 
     if (!currentUser) {
       goToLogin()
@@ -49,13 +79,68 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
     setAddingCart(true)
 
     try {
-      await agregarAlCarrito(skin.id, 1)
-      setCartMessage("Skin agregada al carrito.")
-      onCartChange?.() // actualiza el badge del navbar
+      if (isInCart) {
+        await eliminarItemCarrito(cartItem.id)
+        setCartMessage("Skin removida del carrito.")
+      } else {
+        await agregarAlCarrito(skin.id)
+        setCartMessage("Skin agregada al carrito.")
+      }
+
+      await onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
       setAddingCart(false)
+    }
+  }
+
+  const handleOwnerEdit = async (event) => {
+    event.preventDefault()
+    setError("")
+    setCartMessage("")
+    setOwnerMessage("")
+
+    const price = Number(ownerPrice)
+    if (!price || price <= 0) {
+      setError("El precio debe ser mayor a 0.")
+      return
+    }
+
+    setSavingOwner(true)
+    try {
+      const updated = await editarPublicacion(skin.id, {
+        price,
+        discount: skin.discount ?? 0,
+      })
+      setSkin(updated ?? { ...skin, price })
+      setOwnerMessage("Precio actualizado.")
+      await onMyPublicationsChange?.()
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setSavingOwner(false)
+    }
+  }
+
+  const handleDeactivate = async () => {
+    setError("")
+    setCartMessage("")
+    setOwnerMessage("")
+
+    const confirmed = window.confirm("Seguro que queres dar de baja esta publicacion?")
+    if (!confirmed) return
+
+    setDeactivating(true)
+    try {
+      const message = await despublicarPublicacion(skin.id)
+      setSkin((current) => ({ ...current, active: false }))
+      setOwnerMessage(message || "Publicacion dada de baja.")
+      await onMyPublicationsChange?.()
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setDeactivating(false)
     }
   }
 
@@ -92,7 +177,7 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
     skin.vendedor?.username ??
     skin.vendedor?.realUsername ??
     skin.vendedor?.email ??
-    "Vendedor no disponible"
+    (isOwnPublication ? "Tu publicacion" : "Vendedor no disponible")
 
   return (
     <main className="publication-page">
@@ -126,15 +211,63 @@ function Publicacion({ skinId, currentUser, goToLogin, goToCarrito, volverAlCata
 
           {error && <p className="publication-error">{error}</p>}
           {cartMessage && <p className="publication-success">{cartMessage}</p>}
+          {ownerMessage && <p className="publication-success">{ownerMessage}</p>}
 
-          <div className="publication-actions">
-            <button className="publication-buy" onClick={goToCarrito}>
-              <FaCreditCard /> Comprar ahora
-            </button>
-            <button className="publication-cart" onClick={handleAddToCart} disabled={addingCart}>
-              <FaShoppingCart /> {addingCart ? "Agregando..." : "Agregar al carrito"}
-            </button>
-          </div>
+          {isOwnPublication ? (
+            <form className="publication-owner-panel" onSubmit={handleOwnerEdit}>
+              <div>
+                <span>Administrar publicacion</span>
+                <p>{skin.active === false ? "Esta publicacion esta dada de baja." : "Esta publicacion es tuya."}</p>
+              </div>
+
+              <label>
+                Precio
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={ownerPrice}
+                  onChange={(event) => setOwnerPrice(event.target.value)}
+                  disabled={skin.active === false || savingOwner || deactivating}
+                  required
+                />
+              </label>
+
+              <div className="publication-owner-actions">
+                <button
+                  type="submit"
+                  className="publication-owner-save"
+                  disabled={skin.active === false || savingOwner || deactivating}
+                >
+                  <FaPen /> {savingOwner ? "Guardando..." : "Guardar precio"}
+                </button>
+                <button
+                  type="button"
+                  className="publication-owner-delete"
+                  onClick={handleDeactivate}
+                  disabled={skin.active === false || savingOwner || deactivating}
+                >
+                  <FaBan /> {deactivating ? "Dando de baja..." : "Dar de baja"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="publication-actions">
+              <button className="publication-buy" onClick={goToCarrito}>
+                <FaCreditCard /> Comprar ahora
+              </button>
+              <button
+                className={`publication-cart ${isInCart ? "publication-cart-active" : ""}`}
+                onClick={handleCartAction}
+                disabled={addingCart}
+              >
+                <FaShoppingCart />
+                {addingCart
+                  ? (isInCart ? "Removiendo..." : "Agregando...")
+                  : (isInCart ? "Remover del carrito" : "Agregar al carrito")}
+              </button>
+            </div>
+          )}
 
           <dl className="publication-specs">
             <div>

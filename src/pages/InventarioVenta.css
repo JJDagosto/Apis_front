@@ -208,3 +208,12 @@
     flex-direction: column;
   }
 }
+.inventory-card-footer button.inventory-manage {
+  background: transparent;
+  color: #ffca2c;
+}
+
+.inventory-card-footer button.inventory-manage:hover {
+  background-color: #ffca2c;
+  color: #0c0524;
+}

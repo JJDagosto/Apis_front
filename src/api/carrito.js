@@ -5,19 +5,13 @@ export const getCarrito = async () => {
   return response.data
 }
 
-export const agregarAlCarrito = async (skinId, cantidad = 1) => {
-  const response = await apiRequest(`/carrito/skins/${skinId}?cantidad=${cantidad}`, {
+export const agregarAlCarrito = async (skinId) => {
+  const response = await apiRequest(`/carrito/skins/${skinId}?cantidad=1`, {
     method: "PATCH",
   })
   return response.data
 }
 
-export const actualizarCantidadCarrito = async (itemId, cantidad) => {
-  const response = await apiRequest(`/carrito/items/${itemId}?cantidad=${cantidad}`, {
-    method: "PUT",
-  })
-  return response.data
-}
 
 export const eliminarItemCarrito = async (itemId) => {
   const response = await apiRequest(`/carrito/items/${itemId}`, {

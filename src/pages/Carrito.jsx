@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { FaTrash, FaShoppingCart } from "react-icons/fa"
 import {
-  actualizarCantidadCarrito,
   eliminarItemCarrito,
   getCarrito,
   vaciarCarrito,
@@ -20,7 +19,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [cupon, setCupon] = useState("") // cupon opcional que se pasa al checkout
+  const [cupon, setCupon] = useState("")
 
   const loadCart = async () => {
     setError("")
@@ -29,6 +28,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     try {
       const data = await getCarrito()
       setCarrito(data)
+      await onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -53,24 +53,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
   }
 
   const items = carrito?.items ?? []
-  const total = items.reduce((sum, item) => sum + item.precioUnitario * item.cantidad, 0)
-
-  const handleQuantity = async (itemId, cantidad) => {
-    if (cantidad < 1) return
-    setUpdating(true)
-    setError("")
-    setSuccess("")
-
-    try {
-      const updated = await actualizarCantidadCarrito(itemId, cantidad)
-      setCarrito(updated)
-      onCartChange?.()
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setUpdating(false)
-    }
-  }
+  const total = items.reduce((sum, item) => sum + item.precioUnitario, 0)
 
   const handleRemove = async (itemId) => {
     setUpdating(true)
@@ -80,7 +63,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     try {
       const updated = await eliminarItemCarrito(itemId)
       setCarrito(updated)
-      onCartChange?.()
+      await onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -96,8 +79,8 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     try {
       const updated = await vaciarCarrito()
       setCarrito(updated)
+      await onCartChange?.()
       setSuccess("Carrito vaciado.")
-      onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -137,7 +120,6 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
           <div className="cart-items">
             {items.map((item) => {
               const skin = item.skin
-              const subtotal = item.precioUnitario * item.cantidad
 
               return (
                 <article className="cart-item" key={item.id}>
@@ -151,27 +133,8 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
                     <p>{skin.catalogo?.exteriorName ?? skin.exterior}</p>
                   </div>
 
-                  <div className="cart-quantity">
-                    <button
-                      type="button"
-                      onClick={() => handleQuantity(item.id, item.cantidad - 1)}
-                      disabled={updating || item.cantidad <= 1}
-                    >
-                      -
-                    </button>
-                    <span>{item.cantidad}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleQuantity(item.id, item.cantidad + 1)}
-                      disabled={updating}
-                    >
-                      +
-                    </button>
-                  </div>
-
                   <div className="cart-price">
-                    <strong>${subtotal.toFixed(2)}</strong>
-                    <small>${item.precioUnitario.toFixed(2)} c/u</small>
+                    <strong>${item.precioUnitario.toFixed(2)}</strong>
                   </div>
 
                   <button

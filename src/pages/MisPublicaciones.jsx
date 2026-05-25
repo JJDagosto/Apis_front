@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react"
-import { FaPen, FaPause, FaPlay, FaTimes } from "react-icons/fa"
-import {
-  getMisPublicaciones,
-  getHistorialPublicaciones,
-  editarPublicacion,
-  despublicarPublicacion,
-  republicarPublicacion,
-} from "../api/skins"
+import { FaPen, FaPause, FaTimes } from "react-icons/fa"
+import { despublicarPublicacion, editarPublicacion, getMisPublicaciones } from "../api/skins"
 import "./MisPublicaciones.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -15,48 +9,31 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-// Mapa de estado -> etiqueta + clase de color del badge.
-const ESTADOS = {
-  PUBLICADA: { label: "Publicada", clase: "badge-publicada" },
-  PAUSADA: { label: "Pausada", clase: "badge-pausada" },
-  RESERVADA: { label: "Reservada", clase: "badge-reservada" },
-  VENDIDA: { label: "Vendida", clase: "badge-vendida" },
+function EstadoBadge({ active }) {
+  return (
+    <span className={`pub-badge ${active === false ? "badge-pausada" : "badge-publicada"}`}>
+      {active === false ? "Dada de baja" : "Publicada"}
+    </span>
+  )
 }
 
-function EstadoBadge({ estado }) {
-  const info = ESTADOS[estado] ?? { label: estado, clase: "badge-default" }
-  return <span className={`pub-badge ${info.clase}`}>{info.label}</span>
-}
-
-function MisPublicaciones({ currentUser, goToLogin }) {
-  const [activas, setActivas] = useState([])
-  const [historial, setHistorial] = useState([])
+function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
+  const [publicaciones, setPublicaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [actionId, setActionId] = useState(null) // id con accion en curso (deshabilita botones)
-
-  // Estado del modal de edicion.
+  const [actionId, setActionId] = useState(null)
   const [editItem, setEditItem] = useState(null)
-  const [editForm, setEditForm] = useState({
-    price: "",
-    discountPct: "",
-    intercambiable: true,
-    vendible: true,
-  })
+  const [editPrice, setEditPrice] = useState("")
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
     setError("")
     setLoading(true)
     try {
-      // Dos endpoints distintos: activas (PUBLICADA/PAUSADA) e historial (RESERVADA/VENDIDA).
-      const [act, hist] = await Promise.all([
-        getMisPublicaciones(),
-        getHistorialPublicaciones(),
-      ])
-      setActivas(act)
-      setHistorial(hist)
+      const data = await getMisPublicaciones()
+      setPublicaciones(data)
+      await onPublicationsChange?.()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -82,31 +59,18 @@ function MisPublicaciones({ currentUser, goToLogin }) {
     )
   }
 
+  const activas = publicaciones.filter((skin) => skin.active !== false)
+  const dadasDeBaja = publicaciones.filter((skin) => skin.active === false)
+
   const handleDespublicar = async (skin) => {
     setError("")
     setSuccess("")
     setActionId(skin.id)
     try {
       const msg = await despublicarPublicacion(skin.id)
-      setSuccess(msg || "Publicacion pausada.")
+      setSuccess(msg || "Publicacion dada de baja.")
       await loadData()
     } catch (err) {
-      setError(err.message)
-    } finally {
-      setActionId(null)
-    }
-  }
-
-  const handleRepublicar = async (skin) => {
-    setError("")
-    setSuccess("")
-    setActionId(skin.id)
-    try {
-      const msg = await republicarPublicacion(skin.id)
-      setSuccess(msg || "Publicacion reactivada.")
-      await loadData()
-    } catch (err) {
-      // Caso tipico: stock < 1 -> el back devuelve el motivo.
       setError(err.message)
     } finally {
       setActionId(null)
@@ -117,12 +81,7 @@ function MisPublicaciones({ currentUser, goToLogin }) {
     setError("")
     setSuccess("")
     setEditItem(skin)
-    setEditForm({
-      price: skin.price ?? "",
-      discountPct: Math.round((skin.discount ?? 0) * 100),
-      intercambiable: skin.intercambiable !== false,
-      vendible: skin.vendible !== false,
-    })
+    setEditPrice(String(skin.price ?? ""))
   }
 
   const closeEdit = () => {
@@ -135,30 +94,17 @@ function MisPublicaciones({ currentUser, goToLogin }) {
     setError("")
     setSuccess("")
 
-    const price = Number(editForm.price)
-    const pct = Number(editForm.discountPct)
-
-    // Validaciones espejo de las del back, para no mandar requests que sabemos que rebotan.
+    const price = Number(editPrice)
     if (!price || price <= 0) {
       setError("El precio debe ser mayor a 0.")
-      return
-    }
-    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
-      setError("El descuento debe estar entre 0 y 100.")
-      return
-    }
-    if (!editForm.intercambiable && !editForm.vendible) {
-      setError("La skin debe ser intercambiable, vendible o ambas.")
       return
     }
 
     setSaving(true)
     try {
       await editarPublicacion(editItem.id, {
-        price,                       // SIEMPRE se manda (bug del back: setPrice sin null-check)
-        discount: pct / 100,         // back espera fraccion 0–1
-        intercambiable: editForm.intercambiable,
-        vendible: editForm.vendible,
+        price,
+        discount: editItem.discount ?? 0,
       })
       setSuccess("Publicacion actualizada.")
       setEditItem(null)
@@ -170,43 +116,27 @@ function MisPublicaciones({ currentUser, goToLogin }) {
     }
   }
 
-  // Acciones disponibles segun estado (solo para las activas).
   const renderAcciones = (skin) => {
-    const estado = skin.estadoPublicacion
     const disabled = actionId === skin.id
-
     return (
       <div className="pub-actions">
         <button
           type="button"
           className="pub-btn pub-btn-edit"
-          disabled={disabled}
+          disabled={disabled || skin.active === false}
           onClick={() => openEdit(skin)}
         >
           <FaPen /> Editar
         </button>
 
-        {estado === "PUBLICADA" && (
-          <button
-            type="button"
-            className="pub-btn pub-btn-pause"
-            disabled={disabled}
-            onClick={() => handleDespublicar(skin)}
-          >
-            <FaPause /> {disabled ? "..." : "Despublicar"}
-          </button>
-        )}
-
-        {estado === "PAUSADA" && (
-          <button
-            type="button"
-            className="pub-btn pub-btn-play"
-            disabled={disabled}
-            onClick={() => handleRepublicar(skin)}
-          >
-            <FaPlay /> {disabled ? "..." : "Republicar"}
-          </button>
-        )}
+        <button
+          type="button"
+          className="pub-btn pub-btn-pause"
+          disabled={disabled || skin.active === false}
+          onClick={() => handleDespublicar(skin)}
+        >
+          <FaPause /> {disabled ? "..." : "Dar de baja"}
+        </button>
       </div>
     )
   }
@@ -219,7 +149,7 @@ function MisPublicaciones({ currentUser, goToLogin }) {
       <article className="pub-card" key={skin.id}>
         <div className="pub-image-wrap">
           <img src={skin.imageUrl} alt={skin.name} />
-          <EstadoBadge estado={skin.estadoPublicacion} />
+          <EstadoBadge active={skin.active} />
         </div>
 
         <div className="pub-card-body">
@@ -233,15 +163,6 @@ function MisPublicaciones({ currentUser, goToLogin }) {
             )}
             <strong>${precioFinal.toFixed(2)}</strong>
           </div>
-
-          <div className="pub-flags">
-            <span className={skin.intercambiable ? "flag-on" : "flag-off"}>
-              Intercambiable
-            </span>
-            <span className={skin.vendible ? "flag-on" : "flag-off"}>
-              Vendible
-            </span>
-          </div>
         </div>
 
         {conAcciones && renderAcciones(skin)}
@@ -253,12 +174,11 @@ function MisPublicaciones({ currentUser, goToLogin }) {
     <main className="pub-page">
       <header className="pub-header">
         <h1>Mis publicaciones</h1>
-        <p>Gestiona el estado y los datos de las skins que pusiste a la venta.</p>
+        <p>Gestiona precio y estado de las skins que pusiste a la venta.</p>
       </header>
 
       {error && <p className="pub-error">{error}</p>}
       {success && <p className="pub-success">{success}</p>}
-
       {loading && <p className="pub-message">Cargando publicaciones...</p>}
 
       {!loading && (
@@ -275,12 +195,12 @@ function MisPublicaciones({ currentUser, goToLogin }) {
           </section>
 
           <section className="pub-section">
-            <h2>Historial ({historial.length})</h2>
-            {historial.length === 0 ? (
-              <p className="pub-message">Sin ventas ni reservas todavia.</p>
+            <h2>Dadas de baja ({dadasDeBaja.length})</h2>
+            {dadasDeBaja.length === 0 ? (
+              <p className="pub-message">No tenes publicaciones dadas de baja.</p>
             ) : (
               <div className="pub-grid">
-                {historial.map((skin) => renderCard(skin, false))}
+                {dadasDeBaja.map((skin) => renderCard(skin, false))}
               </div>
             )}
           </section>
@@ -303,46 +223,11 @@ function MisPublicaciones({ currentUser, goToLogin }) {
                 type="number"
                 min="0.01"
                 step="0.01"
-                value={editForm.price}
-                onChange={(e) => setEditForm((f) => ({ ...f, price: e.target.value }))}
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
                 required
               />
             </label>
-
-            <label>
-              Descuento (%)
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                value={editForm.discountPct}
-                onChange={(e) => setEditForm((f) => ({ ...f, discountPct: e.target.value }))}
-              />
-            </label>
-
-            <div className="pub-modal-toggles">
-              <label className="pub-checkbox">
-                <input
-                  type="checkbox"
-                  checked={editForm.intercambiable}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, intercambiable: e.target.checked }))
-                  }
-                />
-                Intercambiable
-              </label>
-              <label className="pub-checkbox">
-                <input
-                  type="checkbox"
-                  checked={editForm.vendible}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, vendible: e.target.checked }))
-                  }
-                />
-                Vendible
-              </label>
-            </div>
 
             <button type="submit" className="pub-btn pub-btn-save" disabled={saving}>
               {saving ? "Guardando..." : "Guardar cambios"}

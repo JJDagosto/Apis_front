@@ -21,42 +21,54 @@ import Checkout from './pages/Checkout'
 import ComoFunciona from './pages/ComoFunciona'
 import Soporte from './pages/Soporte'
 import AdminDevTools from './pages/AdminDevTools'
-import { getCarrito } from "./api/carrito"
-
+import { getCarrito } from './api/carrito'
+import { getMisPublicaciones } from './api/skins'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("home")
+  const [currentPage, setCurrentPage] = useState('home')
   const [selectedSkinId, setSelectedSkinId] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [checkingSession, setCheckingSession] = useState(true)
-  const [resetToken, setResetToken] = useState(null)    // token del link del mail
-  const [verifyToken, setVerifyToken] = useState(null)  // token del link de verificacion
-  const [checkoutCupon, setCheckoutCupon] = useState("") // cupon que viaja del carrito al checkout
-  const [cartCount, setCartCount] = useState(0)          // cantidad total de items para el badge
-  const [searchTerm, setSearchTerm] = useState("")        // termino de busqueda de la lupita
+  const [resetToken, setResetToken] = useState(null)
+  const [verifyToken, setVerifyToken] = useState(null)
+  const [checkoutCupon, setCheckoutCupon] = useState('')
+  const [cartItems, setCartItems] = useState([])
+  const [myPublications, setMyPublications] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const cartCount = cartItems.length
 
   const loadCurrentUser = async () => {
     const user = await getCurrentUser()
     setCurrentUser(user)
-    setCurrentPage("catalogo")
+    setCurrentPage('catalogo')
   }
 
-  // Recalcula el contador del carrito (suma de cantidades).
-  // Cierra sobre currentUser del render actual; los hijos reciben la version mas reciente como prop.
   const refreshCart = async () => {
     if (!currentUser) {
-      setCartCount(0)
+      setCartItems([])
       return
     }
+
     try {
       const carrito = await getCarrito()
-      const total = (carrito?.items ?? []).reduce(
-        (sum, item) => sum + (item.cantidad ?? 0),
-        0
-      )
-      setCartCount(total)
+      setCartItems(carrito?.items ?? [])
     } catch {
-      setCartCount(0)
+      setCartItems([])
+    }
+  }
+
+  const refreshMyPublications = async () => {
+    if (!currentUser) {
+      setMyPublications([])
+      return
+    }
+
+    try {
+      const publicaciones = await getMisPublicaciones()
+      setMyPublications(publicaciones ?? [])
+    } catch {
+      setMyPublications([])
     }
   }
 
@@ -67,61 +79,61 @@ function App() {
       .finally(() => setCheckingSession(false))
   }, [])
 
-  // Deteccion de links de mail: reset y verificacion.
   useEffect(() => {
     const path = window.location.pathname
-    const token = new URLSearchParams(window.location.search).get("token")
+    const token = new URLSearchParams(window.location.search).get('token')
 
-    if (path.includes("reset-password") && token) {
+    if (path.includes('reset-password') && token) {
       setResetToken(token)
-      setCurrentPage("resetPassword")
-      window.history.replaceState({}, "", "/")
+      setCurrentPage('resetPassword')
+      window.history.replaceState({}, '', '/')
       return
     }
 
-    if (path.includes("verify-email") && token) {
+    if (path.includes('verify-email') && token) {
       setVerifyToken(token)
-      setCurrentPage("verifyEmail")
-      window.history.replaceState({}, "", "/")
+      setCurrentPage('verifyEmail')
+      window.history.replaceState({}, '', '/')
     }
   }, [])
 
-  // Refresca el carrito al loguearse y al cambiar de pagina (cubre el caso post-pago,
-  // donde el carrito queda vacio al crearse la orden).
   useEffect(() => {
-    if (currentUser) refreshCart()
-    else setCartCount(0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, currentPage])
+    if (checkingSession) return
 
-  // La lupita del navbar setea el termino y manda al catalogo.
+    if (currentUser) {
+      refreshCart()
+      refreshMyPublications()
+    } else {
+      setCartItems([])
+      setMyPublications([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, currentPage, checkingSession])
+
   const handleSearch = (term) => {
-    setSearchTerm(term || "")
-    setCurrentPage("catalogo")
+    setSearchTerm(term || '')
+    setCurrentPage('catalogo')
   }
 
   const openPublicacion = (skinId) => {
     setSelectedSkinId(skinId)
-    setCurrentPage("publicacion")
+    setCurrentPage('publicacion')
   }
 
   const goToCheckout = (cupon) => {
-    setCheckoutCupon(cupon || "")
-    setCurrentPage("checkout")
+    setCheckoutCupon(cupon || '')
+    setCurrentPage('checkout')
   }
 
   const handleLogout = () => {
     logout()
     setCurrentUser(null)
-    setCartCount(0)
-    setCurrentPage("home")
+    setCartItems([])
+    setMyPublications([])
+    setCurrentPage('home')
   }
 
-  if (checkingSession) {
-    return <p className="catalog-message">Cargando sesion...</p>
-  }
-
-  return (
+return (
     <>
       <NavBar
         setCurrentPage={setCurrentPage}
@@ -131,119 +143,125 @@ function App() {
         onSearch={handleSearch}
       />
 
+      {currentPage === 'home' && (
+        <Home
+          currentUser={currentUser}
+          goToCatalogo={() => setCurrentPage('catalogo')}
+          goToSell={() => setCurrentPage(currentUser ? 'inventarioVenta' : 'login')}
+          goToInfo={() => setCurrentPage('comoFunciona')}
+        />
+      )}
 
-
-      {currentPage === "home" && <Home />}
-
-      {currentPage === "catalogo" && (
+      {currentPage === 'catalogo' && (
         <Catalogo
           openPublicacion={openPublicacion}
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
+          goToLogin={() => setCurrentPage('login')}
           onCartChange={refreshCart}
+          cartItems={cartItems}
+          myPublications={myPublications}
           searchTerm={searchTerm}
-          onClearSearch={() => setSearchTerm("")}
+          onClearSearch={() => setSearchTerm('')}
         />
       )}
 
-      {currentPage === "publicacion" && (
+      {currentPage === 'publicacion' && (
         <Publicacion
           skinId={selectedSkinId}
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
-          goToCarrito={() => setCurrentPage("carrito")}
-          volverAlCatalogo={() => setCurrentPage("catalogo")}
+          goToLogin={() => setCurrentPage('login')}
+          goToCarrito={() => setCurrentPage('carrito')}
+          volverAlCatalogo={() => setCurrentPage('catalogo')}
           onCartChange={refreshCart}
+          cartItems={cartItems}
+          myPublications={myPublications}
+          onMyPublicationsChange={refreshMyPublications}
         />
       )}
 
-      {currentPage === "carrito" && (
+      {currentPage === 'carrito' && (
         <Carrito
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
-          goToCatalogo={() => setCurrentPage("catalogo")}
+          goToLogin={() => setCurrentPage('login')}
+          goToCatalogo={() => setCurrentPage('catalogo')}
           goToCheckout={goToCheckout}
           onCartChange={refreshCart}
         />
       )}
 
-      {currentPage === "checkout" && (
+      {currentPage === 'checkout' && (
         <Checkout
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
-          goToCatalogo={() => setCurrentPage("catalogo")}
+          goToLogin={() => setCurrentPage('login')}
+          goToCatalogo={() => setCurrentPage('catalogo')}
           cupon={checkoutCupon}
         />
       )}
 
-      {currentPage === "login" && (
+      {currentPage === 'login' && (
         <Login
           onLoginSuccess={loadCurrentUser}
-          goToRegister={() => setCurrentPage("register")}
-          goToForgot={() => setCurrentPage("olvidarContrasena")}
+          goToRegister={() => setCurrentPage('register')}
+          goToForgot={() => setCurrentPage('olvidarContrasena')}
         />
       )}
 
-      {currentPage === "register" && (
-        <Register
-          goToLogin={() => setCurrentPage("login")}
-        />
+      {currentPage === 'register' && (
+        <Register goToLogin={() => setCurrentPage('login')} />
       )}
 
-      {currentPage === "olvidarContrasena" && (
-        <ForgotPassword goToLogin={() => setCurrentPage("login")} />
+      {currentPage === 'olvidarContrasena' && (
+        <ForgotPassword goToLogin={() => setCurrentPage('login')} />
       )}
 
-      {currentPage === "resetPassword" && (
-        <ResetPassword
-          token={resetToken}
-          goToLogin={() => setCurrentPage("login")}
-        />
+      {currentPage === 'resetPassword' && (
+        <ResetPassword token={resetToken} goToLogin={() => setCurrentPage('login')} />
       )}
 
-      {currentPage === "verifyEmail" && (
-        <VerifyEmail
-          token={verifyToken}
-          goToLogin={() => setCurrentPage("login")}
-        />
+      {currentPage === 'verifyEmail' && (
+        <VerifyEmail token={verifyToken} goToLogin={() => setCurrentPage('login')} />
       )}
 
-      {currentPage === "perfil" && (
+      {currentPage === 'perfil' && (
         <Perfil
           currentUser={currentUser}
           onProfileUpdated={setCurrentUser}
-          goToLogin={() => setCurrentPage("login")}
+          goToLogin={() => setCurrentPage('login')}
         />
       )}
 
-      {currentPage === "inventarioVenta" && (
+      {currentPage === 'inventarioVenta' && (
         <InventarioVenta
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
+          goToLogin={() => setCurrentPage('login')}
+          openPublicacion={openPublicacion}
+          myPublications={myPublications}
+          onMyPublicationsChange={refreshMyPublications}
         />
       )}
 
-      {currentPage === "misPublicaciones" && (
+      {currentPage === 'misPublicaciones' && (
         <MisPublicaciones
           currentUser={currentUser}
-          goToLogin={() => setCurrentPage("login")}
+          goToLogin={() => setCurrentPage('login')}
+          onPublicationsChange={refreshMyPublications}
         />
       )}
 
-      {currentPage === "adminDevTools" && (
+      {currentPage === 'adminDevTools' && (
         <AdminDevTools
           currentUser={currentUser}
-          goToCatalogo={() => setCurrentPage("catalogo")}
+          goToCatalogo={() => setCurrentPage('catalogo')}
         />
       )}
 
-      {currentPage === "comoFunciona" && <ComoFunciona />}
+      {currentPage === 'comoFunciona' && <ComoFunciona />}
 
-      {currentPage === "soporte" && (
-        <Soporte goToForgot={() => setCurrentPage("olvidarContrasena")} />
+      {currentPage === 'soporte' && (
+        <Soporte goToForgot={() => setCurrentPage('olvidarContrasena')} />
       )}
 
-      {currentPage === "prueba" && <Prueba />}
+      {currentPage === 'prueba' && <Prueba />}
     </>
   )
 }

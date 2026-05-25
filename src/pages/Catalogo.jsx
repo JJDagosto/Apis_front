@@ -1,12 +1,21 @@
-import { useEffect, useState } from "react"
-import { agregarAlCarrito } from "../api/carrito"
+﻿import { useEffect, useState } from "react"
+import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
 import CatalogFilters from "../components/CatalogFilters.jsx"
 import Card from "../components/Card.jsx"
 import "./Catalogo.css"
 
 const URL = "http://localhost:4003"
 
-function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searchTerm = "", onClearSearch }) {
+function Catalogo({
+  openPublicacion,
+  currentUser,
+  goToLogin,
+  onCartChange,
+  cartItems = [],
+  myPublications = [],
+  searchTerm = "",
+  onClearSearch,
+}) {
   const [allSkins, setAllSkins] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -18,10 +27,10 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
     categoria: "",
     precioMin: "",
     precioMax: "",
-    intercambiable: false, // toggle: si true, solo skins intercambiables
-    vendible: false,       // toggle: si true, solo skins vendibles
+    intercambiable: false,
+    vendible: false,
   })
-  const [orden, setOrden] = useState("") // "", precio_asc, precio_desc, nombre_az, nombre_za
+  const [orden, setOrden] = useState("")
 
   const limpiarNombreSkin = (nombre = "") => {
     return nombre
@@ -42,7 +51,6 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
       .finally(() => setLoading(false))
   }, [])
 
-  // Filtros de selección única (string): vuelven a vacío si se clickea el activo.
   const setFilter = (filterName, value) => {
     setFilters((currentFilters) => ({
       ...currentFilters,
@@ -57,7 +65,6 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
     }))
   }
 
-  // Toggle booleano para intercambiable / vendible.
   const toggleBoolFilter = (filterName) => {
     setFilters((currentFilters) => ({
       ...currentFilters,
@@ -65,7 +72,15 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
     }))
   }
 
-  const handleAddToCart = async (skinId) => {
+  const getCartItemBySkinId = (skinId) => {
+    return cartItems.find((item) => item.skin?.id === skinId)
+  }
+
+  const isOwnPublication = (skinId) => {
+    return myPublications.some((publication) => publication.id === skinId)
+  }
+
+  const handleCartClick = async (skinId) => {
     setError("")
     setCartMessage("")
 
@@ -74,12 +89,19 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
       return
     }
 
+    const cartItem = getCartItemBySkinId(skinId)
     setAddingSkinId(skinId)
 
     try {
-      await agregarAlCarrito(skinId, 1)
-      setCartMessage("Skin agregada al carrito.")
-      onCartChange?.() // actualiza el badge del navbar
+      if (cartItem) {
+        await eliminarItemCarrito(cartItem.id)
+        setCartMessage("Skin removida del carrito.")
+      } else {
+        await agregarAlCarrito(skinId)
+        setCartMessage("Skin agregada al carrito.")
+      }
+
+      await onCartChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -88,7 +110,6 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
   }
 
   const skinsFiltradas = allSkins.filter((skin) => {
-    // Busqueda de la lupita: matchea contra el nombre completo y el arma.
     const termino = (searchTerm ?? "").trim().toLowerCase()
     const cumpleBusqueda =
       termino === "" ||
@@ -110,7 +131,6 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
     const cumplePrecioMax =
       filters.precioMax === "" || skin.price <= Number(filters.precioMax)
 
-    // Si el toggle está activo, exigimos el flag en true. Si está apagado, no filtra.
     const cumpleIntercambiable =
       !filters.intercambiable || skin.intercambiable === true
 
@@ -129,8 +149,6 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
     )
   })
 
-  // Ordenamiento sobre el resultado ya filtrado.
-  // Copia con slice() para no mutar el array original de estado.
   const skinsOrdenadas = skinsFiltradas.slice().sort((a, b) => {
     switch (orden) {
       case "precio_asc":
@@ -142,7 +160,7 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
       case "nombre_za":
         return limpiarNombreSkin(b.name).localeCompare(limpiarNombreSkin(a.name))
       default:
-        return 0 // relevancia: mantiene el orden del back
+        return 0
     }
   })
 
@@ -202,8 +220,11 @@ function Catalogo({ openPublicacion, currentUser, goToLogin, onCartChange, searc
                     precio={skin.price}
                     imagen={skin.imageUrl}
                     onClick={() => openPublicacion(skin.id)}
-                    addToCart={() => handleAddToCart(skin.id)}
+                    addToCart={() => handleCartClick(skin.id)}
                     addingToCart={addingSkinId === skin.id}
+                    inCart={Boolean(getCartItemBySkinId(skin.id))}
+                    isOwnPublication={isOwnPublication(skin.id)}
+                    onManage={() => openPublicacion(skin.id)}
                   />
                 ))}
             </div>

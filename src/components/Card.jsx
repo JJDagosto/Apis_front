@@ -1,6 +1,6 @@
 import "./Card.css"
 import "./Global.css"
-import { FaShoppingCart } from "react-icons/fa"
+import { FaPen, FaShoppingCart } from "react-icons/fa"
 
 const Card = ({
   arma,
@@ -11,7 +11,21 @@ const Card = ({
   onClick,
   addToCart,
   addingToCart,
+  inCart = false,
+  isOwnPublication = false,
+  onManage,
 }) => {
+  const handleActionClick = (event) => {
+    event.stopPropagation()
+
+    if (isOwnPublication) {
+      onManage?.()
+      return
+    }
+
+    addToCart?.()
+  }
+
   return (
     <div className="card align-items-center flex-shrink-0" onClick={onClick}>
       <div className="contenedorImagen m-3">
@@ -27,16 +41,19 @@ const Card = ({
           <span className="" id="precio">${precio.toFixed(2)}</span>
           <button
             type="button"
-            className="btn d-flex align-items-center justify-content-center"
+            className={`btn d-flex align-items-center justify-content-center cart-card-button ${inCart ? "in-cart" : ""} ${isOwnPublication ? "own-publication" : ""}`}
             id="cart"
             disabled={addingToCart}
-            onClick={(event) => {
-              event.stopPropagation()
-              addToCart?.()
-            }}
-            title={addingToCart ? "Agregando..." : "Agregar al carrito"}
+            onClick={handleActionClick}
+            title={
+              isOwnPublication
+                ? "Administrar publicacion"
+                : addingToCart
+                  ? "Actualizando..."
+                  : (inCart ? "Remover del carrito" : "Agregar al carrito")
+            }
           >
-            <FaShoppingCart />
+            {isOwnPublication ? <FaPen /> : <FaShoppingCart />}
           </button>
         </div>
       </div>
@@ -45,3 +62,4 @@ const Card = ({
 }
 
 export default Card
+

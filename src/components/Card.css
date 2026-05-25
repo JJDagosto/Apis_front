@@ -39,3 +39,23 @@
 
 
 
+
+#cart.in-cart {
+  background-color: #ffca2c;
+  color: #0c0524;
+}
+
+#cart.in-cart:hover {
+  background-color: transparent;
+  color: #ffca2c;
+}
+
+#cart.own-publication {
+  background-color: #ffca2c;
+  color: #0c0524;
+}
+
+#cart.own-publication:hover {
+  background-color: transparent;
+  color: #ffca2c;
+}
