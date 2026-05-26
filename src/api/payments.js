@@ -3,8 +3,8 @@ import { apiRequest } from "./client"
 const pendingPreferenceRequests = new Map()
 
 /**
- * Crea la orden a partir del carrito y devuelve los datos para el Payment Brick.
- * Respuesta: { order, preferenceId, publicKey, paymentStatus }
+ * Crea la orden a partir del carrito y devuelve los datos de checkout.
+ * Respuesta: { order, preferenceId, publicKey, paymentStatus, initPoint, sandboxInitPoint }
  * El codigoCupon es opcional.
  */
 export const crearPreferenciaDesdeCarrito = async (codigoCupon) => {

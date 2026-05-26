@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { FaBan, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
+import { FaBan, FaChevronLeft, FaChevronRight, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
 import {
   buscarCatalogo,
   crearCuponAdmin,
@@ -8,7 +8,6 @@ import {
   getCuponesAdmin,
   getOrdenesAdmin,
   getPublicacionesVisibles,
-  getTodasLasSkinsAdmin,
   getUsuariosAdmin,
   inactivarSkinAdmin,
 } from "../api/adminDev"
@@ -25,8 +24,21 @@ const getUserLabel = (user) => {
   return `${user.username || nombre || user.email} - ${user.email}`
 }
 
+const getCatalogExteriorLabel = (item) => item.exteriorName || "Sin desgaste"
+
+const isCatalogStattrak = (item) => {
+  return /stattrak/i.test(`${item.name ?? ""} ${item.marketHashName ?? ""}`)
+}
+
+const exteriorOrder = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
+const PUBLICACIONES_POR_PAGINA = 10
+
+const getExteriorSortValue = (item) => {
+  const index = exteriorOrder.indexOf(item.exteriorName)
+  return index === -1 ? exteriorOrder.length : index
+}
+
 function AdminDevTools({ currentUser, goToCatalogo }) {
-  const [skins, setSkins] = useState([])
   const [publicaciones, setPublicaciones] = useState([])
   const [cupones, setCupones] = useState([])
   const [usuarios, setUsuarios] = useState([])
@@ -47,6 +59,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
   const [actionId, setActionId] = useState(null)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const [publicacionesPage, setPublicacionesPage] = useState(1)
 
   const isAdmin = currentUser?.role === "ADMIN"
 
@@ -54,14 +67,12 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setError("")
     setLoading(true)
     try {
-      const [skinsData, publicacionesData, cuponesData, usuariosData, ordenesData] = await Promise.all([
-        getTodasLasSkinsAdmin(),
+      const [publicacionesData, cuponesData, usuariosData, ordenesData] = await Promise.all([
         getPublicacionesVisibles(),
         getCuponesAdmin(),
         getUsuariosAdmin(),
         getOrdenesAdmin(),
       ])
-      setSkins(skinsData)
       setPublicaciones(publicacionesData)
       setCupones(cuponesData)
       setUsuarios(usuariosData)
@@ -93,13 +104,32 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     })
   }, [publicaciones, skinSearch])
 
-  const publicacionesIds = useMemo(() => {
-    return new Set(publicaciones.map((skin) => skin.id))
-  }, [publicaciones])
+  const publicacionesTotalPages = Math.max(1, Math.ceil(skinsFiltradas.length / PUBLICACIONES_POR_PAGINA))
+
+  useEffect(() => {
+    setPublicacionesPage(1)
+  }, [skinSearch])
+
+  useEffect(() => {
+    setPublicacionesPage((page) => Math.min(page, publicacionesTotalPages))
+  }, [publicacionesTotalPages])
+
+  const publicacionesPaginadas = useMemo(() => {
+    const start = (publicacionesPage - 1) * PUBLICACIONES_POR_PAGINA
+    return skinsFiltradas.slice(start, start + PUBLICACIONES_POR_PAGINA)
+  }, [skinsFiltradas, publicacionesPage])
+
+  const publicacionesDesde = skinsFiltradas.length === 0
+    ? 0
+    : (publicacionesPage - 1) * PUBLICACIONES_POR_PAGINA + 1
+  const publicacionesHasta = Math.min(
+    publicacionesPage * PUBLICACIONES_POR_PAGINA,
+    skinsFiltradas.length,
+  )
 
   const stats = {
     skinsPublicadas: publicaciones.length,
-    skinsNoPublicadas: skins.filter((skin) => !publicacionesIds.has(skin.id)).length,
+    transacciones: ordenes.length,
     cuponesActivos: cupones.filter((cupon) => cupon.activo !== false).length,
     usuarios: usuarios.length,
   }
@@ -107,6 +137,25 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
   const sellerOptions = useMemo(() => {
     return usuarios.filter((user) => user.email)
   }, [usuarios])
+
+  const catalogResultsOrdenados = useMemo(() => {
+    return catalogResults.slice().sort((a, b) => {
+      const aTieneDesgaste = Boolean(a.exteriorName)
+      const bTieneDesgaste = Boolean(b.exteriorName)
+      if (aTieneDesgaste !== bTieneDesgaste) return aTieneDesgaste ? -1 : 1
+
+      const armaCompare = (a.weaponName ?? "").localeCompare(b.weaponName ?? "")
+      if (armaCompare !== 0) return armaCompare
+
+      const nombreCompare = limpiarNombreSkin(a.name).localeCompare(limpiarNombreSkin(b.name))
+      if (nombreCompare !== 0) return nombreCompare
+
+      const stattrakCompare = Number(isCatalogStattrak(a)) - Number(isCatalogStattrak(b))
+      if (stattrakCompare !== 0) return stattrakCompare
+
+      return getExteriorSortValue(a) - getExteriorSortValue(b)
+    })
+  }, [catalogResults])
 
   const resolveSeller = () => {
     const term = sellerSearch.trim().toLowerCase()
@@ -272,7 +321,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
         <div className="admin-stats">
           <div><span>Publicadas</span><strong>{stats.skinsPublicadas}</strong></div>
-          <div><span>No publicadas</span><strong>{stats.skinsNoPublicadas}</strong></div>
+          <div><span>Transacciones</span><strong>{stats.transacciones}</strong></div>
           <div><span>Cupones</span><strong>{stats.cuponesActivos}</strong></div>
           <div><span>Usuarios</span><strong>{stats.usuarios}</strong></div>
         </div>
@@ -283,6 +332,12 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
         {!loading && (
           <div className="admin-dashboard">
+            <section className="admin-card admin-mini-list">
+              <h2>Resumen</h2>
+              <p>Ordenes registradas: <strong>{ordenes.length}</strong></p>
+              <p>Admins: <strong>{usuarios.filter((user) => user.role === "ADMIN").length}</strong></p>
+            </section>
+
             <section className="admin-card admin-wide">
               <div className="admin-section-header">
                 <div>
@@ -298,7 +353,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               </div>
 
               <div className="admin-table">
-                {skinsFiltradas.slice(0, 12).map((skin) => (
+                {publicacionesPaginadas.map((skin) => (
                   <article className="admin-row" key={skin.id}>
                     <img src={skin.imageUrl} alt={skin.name} />
                     <div>
@@ -324,9 +379,36 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   </p>
                 )}
               </div>
+
+              {skinsFiltradas.length > 0 && (
+                <div className="admin-pagination">
+                  <span>
+                    {publicacionesDesde}-{publicacionesHasta} de {skinsFiltradas.length}
+                  </span>
+                  <div>
+                    <button
+                      type="button"
+                      disabled={publicacionesPage === 1}
+                      onClick={() => setPublicacionesPage((page) => Math.max(1, page - 1))}
+                      title="Pagina anterior"
+                    >
+                      <FaChevronLeft />
+                    </button>
+                    <strong>{publicacionesPage} / {publicacionesTotalPages}</strong>
+                    <button
+                      type="button"
+                      disabled={publicacionesPage === publicacionesTotalPages}
+                      onClick={() => setPublicacionesPage((page) => Math.min(publicacionesTotalPages, page + 1))}
+                      title="Pagina siguiente"
+                    >
+                      <FaChevronRight />
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card admin-coupons-card">
               <div className="admin-section-header">
                 <div>
                   <h2>Cupones</h2>
@@ -389,7 +471,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               </div>
             </section>
 
-            <section className="admin-card">
+            <section className="admin-card admin-create-card">
               <div className="admin-section-header">
                 <div>
                   <h2>Crear publicacion admin</h2>
@@ -410,7 +492,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               </form>
 
               <div className="admin-catalog-results">
-                {catalogResults.slice(0, 4).map((item) => (
+                {catalogResultsOrdenados.slice(0, 8).map((item) => (
                   <button
                     type="button"
                     className={selectedCatalog?.id === item.id ? "admin-catalog-item selected" : "admin-catalog-item"}
@@ -418,8 +500,15 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                     onClick={() => setSelectedCatalog(item)}
                   >
                     <img src={item.imageUrl} alt={item.name} />
-                    <span>{item.weaponName}</span>
-                    <strong>{limpiarNombreSkin(item.name)}</strong>
+                    <div className="admin-catalog-main">
+                      <span>{item.weaponName}</span>
+                      <strong>{limpiarNombreSkin(item.name)}</strong>
+                    </div>
+                    <div className="admin-catalog-meta">
+                      <span>{getCatalogExteriorLabel(item)}</span>
+                      {isCatalogStattrak(item) && <span>StatTrak</span>}
+                      {item.rarezaName && <span>{item.rarezaName}</span>}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -454,13 +543,6 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   <FaPlus /> Crear skin
                 </button>
               </form>
-            </section>
-
-            <section className="admin-card admin-mini-list">
-              <h2>Resumen</h2>
-              <p>Ordenes registradas: <strong>{ordenes.length}</strong></p>
-              <p>Admins: <strong>{usuarios.filter((user) => user.role === "ADMIN").length}</strong></p>
-
             </section>
           </div>
         )}

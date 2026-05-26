@@ -15,6 +15,12 @@
   gap: 18px;
   justify-content: space-between;
   margin-bottom: 24px;
+  text-align: left;
+}
+
+.admin-dev-header > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-dev-header h1 {
@@ -230,6 +236,10 @@
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  grid-template-areas:
+    "publicaciones resumen"
+    "publicaciones cupones"
+    "publicaciones crear";
 }
 
 .admin-card {
@@ -237,7 +247,19 @@
 }
 
 .admin-wide {
-  grid-row: span 2;
+  grid-area: publicaciones;
+}
+
+.admin-mini-list {
+  grid-area: resumen;
+}
+
+.admin-coupons-card {
+  grid-area: cupones;
+}
+
+.admin-create-card {
+  grid-area: crear;
 }
 
 .admin-section-header {
@@ -280,6 +302,21 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.admin-catalog-results {
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-catalog-results::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-catalog-results::-webkit-scrollbar-thumb {
+  background: rgba(255, 202, 44, 0.35);
+  border-radius: 999px;
 }
 
 .admin-row,
@@ -347,9 +384,45 @@
 .admin-coupon-row button:disabled,
 .admin-coupon-form button:disabled,
 .admin-dev-search.compact button:disabled,
-.admin-create-skin button:disabled {
+.admin-create-skin button:disabled,
+.admin-pagination button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.admin-pagination {
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.admin-pagination div {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.admin-pagination button {
+  align-items: center;
+  background: rgba(255, 202, 44, 0.12);
+  border: 1px solid rgba(255, 202, 44, 0.38);
+  border-radius: 6px;
+  color: #ffca2c;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.admin-pagination strong {
+  color: white;
+  min-width: 52px;
+  text-align: center;
 }
 
 .admin-coupon-form,
@@ -429,7 +502,7 @@
   color: white;
   display: grid;
   gap: 8px;
-  grid-template-columns: 52px minmax(0, 0.45fr) minmax(0, 1fr);
+  grid-template-columns: 52px minmax(0, 0.9fr) minmax(0, 1fr);
   padding: 8px;
   text-align: left;
 }
@@ -443,6 +516,40 @@
   aspect-ratio: 1;
   object-fit: contain;
   width: 52px;
+}
+
+.admin-catalog-main,
+.admin-catalog-meta {
+  min-width: 0;
+}
+
+.admin-catalog-main span,
+.admin-catalog-main strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-catalog-main span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.admin-catalog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.admin-catalog-meta span {
+  background: rgba(255, 202, 44, 0.12);
+  border: 1px solid rgba(255, 202, 44, 0.28);
+  border-radius: 999px;
+  color: #ffe28a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 8px;
 }
 
 .admin-create-skin {
@@ -474,8 +581,11 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .admin-wide {
-    grid-row: auto;
+  .admin-dashboard {
+    grid-template-areas:
+      "resumen resumen"
+      "publicaciones publicaciones"
+      "cupones crear";
   }
 }
 
@@ -487,6 +597,14 @@
   .admin-create-skin,
   .admin-section-header {
     grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard {
+    grid-template-areas:
+      "resumen"
+      "publicaciones"
+      "cupones"
+      "crear";
   }
 
   .admin-coupon-form {

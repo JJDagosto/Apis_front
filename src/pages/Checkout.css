@@ -35,6 +35,25 @@
   font-size: 1.15rem;
 }
 
+.checkout-mp-button {
+  align-items: center;
+  background: #ffca2c;
+  border-radius: 8px;
+  color: #0c0524;
+  display: flex;
+  font-weight: 800;
+  justify-content: center;
+  margin-top: 18px;
+  min-height: 48px;
+  padding: 10px 16px;
+  text-decoration: none;
+  width: 100%;
+}
+
+.checkout-mp-button:hover {
+  filter: brightness(1.04);
+}
+
 .checkout-message {
   color: #b9b9c6;
 }
@@ -74,12 +93,22 @@
   margin-top: 8px;
 }
 
-.checkout-test-card {
+.checkout-test-details {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 22px;
+  padding-top: 16px;
+}
+
+.checkout-test-details summary {
+  color: #ffca2c;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.checkout-test-card {
   display: grid;
   gap: 14px;
-  margin-top: 22px;
-  padding-top: 20px;
+  margin-top: 16px;
 }
 
 .checkout-test-card h2 {
