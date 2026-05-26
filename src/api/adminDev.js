@@ -13,8 +13,21 @@ export const crearSkinAdmin = async (payload) => {
   return response.data
 }
 
+export const crearSkinAdminParaUsuario = async (vendedorEmail, payload) => {
+  const response = await apiRequest(`/skins/admin/create-for-user?email=${encodeURIComponent(vendedorEmail)}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+  return response.data
+}
+
 export const getTodasLasSkinsAdmin = async () => {
   const response = await apiRequest("/skins/admin/all?includeInactive=true")
+  return response.data ?? []
+}
+
+export const getPublicacionesVisibles = async () => {
+  const response = await apiRequest("/skins/get/all")
   return response.data ?? []
 }
 

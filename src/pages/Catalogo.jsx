@@ -2,6 +2,7 @@
 import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
 import CatalogFilters from "../components/CatalogFilters.jsx"
 import Card from "../components/Card.jsx"
+import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Catalogo.css"
 
 const URL = "http://localhost:4003"
@@ -10,6 +11,7 @@ function Catalogo({
   openPublicacion,
   currentUser,
   goToLogin,
+  goToPerfil,
   onCartChange,
   cartItems = [],
   myPublications = [],
@@ -89,6 +91,13 @@ function Catalogo({
       return
     }
 
+    const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
+    if (tradeUrlIssue) {
+      setError(`${tradeUrlIssue} Completa tu perfil antes de agregar skins al carrito.`)
+      goToPerfil?.()
+      return
+    }
+
     const cartItem = getCartItemBySkinId(skinId)
     setAddingSkinId(skinId)
 
@@ -101,7 +110,7 @@ function Catalogo({
         setCartMessage("Skin agregada al carrito.")
       }
 
-      await onCartChange?.()
+      await onCartChange?.({ resetCheckout: true })
     } catch (error) {
       setError(error.message)
     } finally {

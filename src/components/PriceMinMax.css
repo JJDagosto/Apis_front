@@ -1,10 +1,47 @@
-.body{
-    width: 100%;
+.price-filter {
+  margin-top: 24px;
+  padding-bottom: 28px;
+  width: 100%;
 }
-.body div{
-    width: 70%;
+
+.price-filter h6 {
+  color: #fff;
+  margin-bottom: 12px;
 }
-.body div input{
-    width: 100%;
-    color: white;
+
+.price-filter-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 230px;
+  width: 100%;
+}
+
+.price-filter label {
+  color: rgba(255, 255, 255, 0.72);
+  display: grid;
+  font-size: 0.9rem;
+  gap: 6px;
+  min-width: 0;
+}
+
+.price-filter input {
+  background: #0c0524;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  color: #fff;
+  font: inherit;
+  min-width: 0;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.price-filter input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.price-filter input:focus {
+  border-color: #ffca2c;
+  box-shadow: 0 0 0 2px rgba(255, 202, 44, 0.14);
+  outline: none;
 }

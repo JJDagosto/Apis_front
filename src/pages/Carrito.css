@@ -115,9 +115,61 @@
   margin: 0;
 }
 
+.cart-cupon {
+  color: rgba(255, 255, 255, 0.82);
+  display: grid;
+  font-weight: 600;
+  gap: 8px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.cart-cupon input {
+  background-color: #12072f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: white;
+  font: inherit;
+  min-height: 44px;
+  outline: none;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  width: 100%;
+}
+
+.cart-cupon input::placeholder {
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.cart-cupon input:focus {
+  background-color: #160837;
+  border-color: #ffca2c;
+  box-shadow: 0 0 0 3px rgba(255, 202, 44, 0.14);
+}
+
 .cart-summary div {
   display: flex;
   justify-content: space-between;
+}
+
+.cart-setup-warning {
+  background-color: rgba(255, 202, 44, 0.08);
+  border: 1px solid rgba(255, 202, 44, 0.22);
+  border-radius: 6px;
+  display: grid !important;
+  gap: 8px;
+  justify-content: stretch !important;
+  padding: 12px;
+}
+
+.cart-setup-warning strong {
+  color: #ffca2c;
+}
+
+.cart-setup-warning p {
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0;
 }
 
 .cart-summary button,
@@ -129,6 +181,13 @@
   color: #0c0524;
   font-weight: 700;
   padding: 10px 14px;
+}
+
+.cart-summary > button:disabled {
+  background-color: rgba(255, 202, 44, 0.42);
+  border-color: rgba(255, 202, 44, 0.18);
+  color: rgba(12, 5, 36, 0.82);
+  opacity: 1;
 }
 
 .cart-empty {
@@ -167,4 +226,3 @@
     justify-self: start;
   }
 }
-

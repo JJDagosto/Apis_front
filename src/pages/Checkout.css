@@ -73,3 +73,54 @@
   display: block;
   margin-top: 8px;
 }
+
+.checkout-test-card {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 20px;
+}
+
+.checkout-test-card h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.checkout-test-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkout-test-grid label {
+  color: #b9b9c6;
+  display: grid;
+  font-size: 0.86rem;
+  gap: 6px;
+}
+
+.checkout-test-grid input {
+  background: #12072f;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #fff;
+  font: inherit;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.checkout-test-wide {
+  grid-column: 1 / -1;
+}
+
+.checkout-test-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (max-width: 560px) {
+  .checkout-test-grid {
+    grid-template-columns: 1fr;
+  }
+}

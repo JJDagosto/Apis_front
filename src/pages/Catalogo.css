@@ -4,7 +4,7 @@ body{
 .row{
     
     width: 100%;
-    padding: 0px 5%;
+    padding: 0px 5% 40px;
 }
 
 
@@ -32,6 +32,10 @@ select option {
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.catalog-filters {
+  padding-bottom: 24px;
 }
 
 .catalog-filters .filter-item:hover,

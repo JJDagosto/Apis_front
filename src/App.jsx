@@ -32,6 +32,7 @@ function App() {
   const [resetToken, setResetToken] = useState(null)
   const [verifyToken, setVerifyToken] = useState(null)
   const [checkoutCupon, setCheckoutCupon] = useState('')
+  const [checkoutSession, setCheckoutSession] = useState(null)
   const [cartItems, setCartItems] = useState([])
   const [myPublications, setMyPublications] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -44,7 +45,11 @@ function App() {
     setCurrentPage('catalogo')
   }
 
-  const refreshCart = async () => {
+  const refreshCart = async ({ resetCheckout = false } = {}) => {
+    if (resetCheckout) {
+      setCheckoutSession(null)
+    }
+
     if (!currentUser) {
       setCartItems([])
       return
@@ -130,6 +135,7 @@ function App() {
     setCurrentUser(null)
     setCartItems([])
     setMyPublications([])
+    setCheckoutSession(null)
     setCurrentPage('home')
   }
 
@@ -157,6 +163,7 @@ return (
           openPublicacion={openPublicacion}
           currentUser={currentUser}
           goToLogin={() => setCurrentPage('login')}
+          goToPerfil={() => setCurrentPage('perfil')}
           onCartChange={refreshCart}
           cartItems={cartItems}
           myPublications={myPublications}
@@ -170,6 +177,7 @@ return (
           skinId={selectedSkinId}
           currentUser={currentUser}
           goToLogin={() => setCurrentPage('login')}
+          goToPerfil={() => setCurrentPage('perfil')}
           goToCarrito={() => setCurrentPage('carrito')}
           volverAlCatalogo={() => setCurrentPage('catalogo')}
           onCartChange={refreshCart}
@@ -184,6 +192,7 @@ return (
           currentUser={currentUser}
           goToLogin={() => setCurrentPage('login')}
           goToCatalogo={() => setCurrentPage('catalogo')}
+          goToPerfil={() => setCurrentPage('perfil')}
           goToCheckout={goToCheckout}
           onCartChange={refreshCart}
         />
@@ -194,7 +203,11 @@ return (
           currentUser={currentUser}
           goToLogin={() => setCurrentPage('login')}
           goToCatalogo={() => setCurrentPage('catalogo')}
+          goToPerfil={() => setCurrentPage('perfil')}
           cupon={checkoutCupon}
+          checkoutSession={checkoutSession}
+          onCheckoutSessionChange={setCheckoutSession}
+          onCartChange={refreshCart}
         />
       )}
 
@@ -234,6 +247,7 @@ return (
         <InventarioVenta
           currentUser={currentUser}
           goToLogin={() => setCurrentPage('login')}
+          goToPerfil={() => setCurrentPage('perfil')}
           openPublicacion={openPublicacion}
           myPublications={myPublications}
           onMyPublicationsChange={refreshMyPublications}

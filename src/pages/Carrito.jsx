@@ -5,6 +5,7 @@ import {
   getCarrito,
   vaciarCarrito,
 } from "../api/carrito"
+import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Carrito.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -13,7 +14,7 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartChange }) {
+function Carrito({ currentUser, goToLogin, goToCatalogo, goToPerfil, goToCheckout, onCartChange }) {
   const [carrito, setCarrito] = useState(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -28,7 +29,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     try {
       const data = await getCarrito()
       setCarrito(data)
-      await onCartChange?.()
+      await onCartChange?.({ resetCheckout: true })
     } catch (error) {
       setError(error.message)
     } finally {
@@ -54,6 +55,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
 
   const items = carrito?.items ?? []
   const total = items.reduce((sum, item) => sum + item.precioUnitario, 0)
+  const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
 
   const handleRemove = async (itemId) => {
     setUpdating(true)
@@ -63,7 +65,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     try {
       const updated = await eliminarItemCarrito(itemId)
       setCarrito(updated)
-      await onCartChange?.()
+      await onCartChange?.({ resetCheckout: true })
     } catch (error) {
       setError(error.message)
     } finally {
@@ -86,6 +88,18 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
     } finally {
       setUpdating(false)
     }
+  }
+
+  const handleCheckout = () => {
+    setError("")
+    setSuccess("")
+
+    if (tradeUrlIssue) {
+      setError(`${tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.`)
+      return
+    }
+
+    goToCheckout(cupon)
   }
 
   return (
@@ -152,6 +166,13 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
 
           <aside className="cart-summary">
             <h2>Resumen</h2>
+            {tradeUrlIssue && (
+              <div className="cart-setup-warning">
+                <strong>Falta Steam Trade URL</strong>
+                <p>{tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.</p>
+                <button type="button" onClick={goToPerfil}>Completar perfil</button>
+              </div>
+            )}
             <div>
               <span>Items</span>
               <strong>{items.length}</strong>
@@ -173,8 +194,8 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToCheckout, onCartCha
 
             <button
               type="button"
-              onClick={() => goToCheckout(cupon)}
-              disabled={updating}
+              onClick={handleCheckout}
+              disabled={updating || Boolean(tradeUrlIssue)}
             >
               Continuar compra
             </button>

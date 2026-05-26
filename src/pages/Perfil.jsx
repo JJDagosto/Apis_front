@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { updateCurrentUser } from "../api/auth"
+import { isValidSteamTradeUrl } from "../utils/tradeProfile"
 import "./Perfil.css"
 
 const emptyProfile = {
@@ -9,6 +10,7 @@ const emptyProfile = {
   lastName: "",
   steamId64: "",
   tradeUrl: "",
+  aliasCobro: "",
   password: "",
 }
 
@@ -28,6 +30,7 @@ function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
       lastName: currentUser.lastName ?? "",
       steamId64: currentUser.steamId64 ?? "",
       tradeUrl: currentUser.tradeUrl ?? "",
+      aliasCobro: currentUser.aliasCobro ?? currentUser.aliasMercadoPago ?? "",
       password: "",
     })
   }, [currentUser])
@@ -61,6 +64,11 @@ function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
       return
     }
 
+    if (form.tradeUrl.trim() && !isValidSteamTradeUrl(form.tradeUrl)) {
+      setError("Steam Trade URL debe ser un link valido de Steam con partner y token.")
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -71,6 +79,7 @@ function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
         lastName: form.lastName.trim(),
         steamId64: form.steamId64.trim(),
         tradeUrl: form.tradeUrl.trim(),
+        aliasCobro: form.aliasCobro.trim(),
       }
 
       if (form.password.trim()) {
@@ -165,6 +174,68 @@ function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
                   value={form.tradeUrl}
                   onChange={(event) => updateField("tradeUrl", event.target.value)}
                   placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..."
+                />
+              </label>
+            </div>
+
+            <div className="trade-url-guide">
+              <h3>Instructivo para conseguir tu Steam Trade URL</h3>
+              <p>
+                Para poder vender, comprar o intercambiar skins dentro de la plataforma, necesitas cargar tu Steam Trade URL. Este enlace permite que nuestro bot pueda enviarte una oferta de intercambio de forma segura.
+              </p>
+
+              <ol>
+                <li>
+                  <strong>Entra a Steam.</strong>
+                  <span> Ingresa a tu cuenta desde Steam o desde el navegador: </span>
+                  <a href="https://steamcommunity.com" target="_blank" rel="noreferrer">
+                    https://steamcommunity.com
+                  </a>
+                </li>
+                <li>
+                  <strong>Abri tu inventario.</strong>
+                  <span> Una vez dentro de tu cuenta, entra a Perfil y despues Inventario.</span>
+                </li>
+                <li>
+                  <strong>Entra a Ofertas de intercambio.</strong>
+                  <span> Dentro del inventario, busca Ofertas de intercambio o Trade Offers.</span>
+                </li>
+                <li>
+                  <strong>Entra a Quien puede enviarme ofertas.</strong>
+                  <span> En Trade Offers, selecciona Quien puede enviarme ofertas de intercambio o Who can send me Trade Offers?</span>
+                </li>
+                <li>
+                  <strong>Copia tu Trade URL.</strong>
+                  <span> Baja hasta la seccion de sitios de terceros y copia el enlace completo.</span>
+                </li>
+              </ol>
+
+              <div className="trade-url-example">
+                <span>Ejemplo correcto</span>
+                <code>https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=abcDEF</code>
+              </div>
+
+              <p>
+                Tenes que pegar el enlace completo, incluyendo <strong>partner</strong> y <strong>token</strong>. Steam usa esta URL para que otras personas o servicios puedan enviarte ofertas de intercambio, incluso sin estar en tu lista de amigos.
+              </p>
+            </div>
+          </div>
+
+          <div className="steam-section">
+            <h2>Cobros</h2>
+            <p>
+              Alias de CBU, CVU o billetera virtual donde queres recibir el dinero cuando vendas una skin.
+              Lo podes cambiar cuando quieras. Cuando el marketplace opere con pagos reales, se usara este dato para gestionar la transferencia.
+            </p>
+
+            <div className="profile-grid">
+              <label>
+                Alias de cobro
+                <input
+                  type="text"
+                  value={form.aliasCobro}
+                  onChange={(event) => updateField("aliasCobro", event.target.value)}
+                  placeholder="tu.alias.cbu"
                 />
               </label>
             </div>

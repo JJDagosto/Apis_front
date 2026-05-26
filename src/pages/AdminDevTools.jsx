@@ -3,10 +3,11 @@ import { FaBan, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
 import {
   buscarCatalogo,
   crearCuponAdmin,
-  crearSkinAdmin,
+  crearSkinAdminParaUsuario,
   eliminarCuponAdmin,
   getCuponesAdmin,
   getOrdenesAdmin,
+  getPublicacionesVisibles,
   getTodasLasSkinsAdmin,
   getUsuariosAdmin,
   inactivarSkinAdmin,
@@ -19,8 +20,14 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
+const getUserLabel = (user) => {
+  const nombre = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+  return `${user.username || nombre || user.email} - ${user.email}`
+}
+
 function AdminDevTools({ currentUser, goToCatalogo }) {
   const [skins, setSkins] = useState([])
+  const [publicaciones, setPublicaciones] = useState([])
   const [cupones, setCupones] = useState([])
   const [usuarios, setUsuarios] = useState([])
   const [ordenes, setOrdenes] = useState([])
@@ -29,6 +36,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
   const [catalogResults, setCatalogResults] = useState([])
   const [selectedCatalog, setSelectedCatalog] = useState(null)
   const [price, setPrice] = useState("1000")
+  const [sellerSearch, setSellerSearch] = useState("")
   const [couponForm, setCouponForm] = useState({
     codigo: "",
     descuentoPct: "10",
@@ -46,13 +54,15 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setError("")
     setLoading(true)
     try {
-      const [skinsData, cuponesData, usuariosData, ordenesData] = await Promise.all([
+      const [skinsData, publicacionesData, cuponesData, usuariosData, ordenesData] = await Promise.all([
         getTodasLasSkinsAdmin(),
+        getPublicacionesVisibles(),
         getCuponesAdmin(),
         getUsuariosAdmin(),
         getOrdenesAdmin(),
       ])
       setSkins(skinsData)
+      setPublicaciones(publicacionesData)
       setCupones(cuponesData)
       setUsuarios(usuariosData)
       setOrdenes(ordenesData)
@@ -73,7 +83,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
   const skinsFiltradas = useMemo(() => {
     const term = skinSearch.trim().toLowerCase()
-    return skins.filter((skin) => {
+    return publicaciones.filter((skin) => {
       if (!term) return true
       return (
         (skin.name ?? "").toLowerCase().includes(term) ||
@@ -81,13 +91,36 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
         String(skin.id).includes(term)
       )
     })
-  }, [skins, skinSearch])
+  }, [publicaciones, skinSearch])
+
+  const publicacionesIds = useMemo(() => {
+    return new Set(publicaciones.map((skin) => skin.id))
+  }, [publicaciones])
 
   const stats = {
-    skinsActivas: skins.filter((skin) => skin.active !== false).length,
-    skinsInactivas: skins.filter((skin) => skin.active === false).length,
+    skinsPublicadas: publicaciones.length,
+    skinsNoPublicadas: skins.filter((skin) => !publicacionesIds.has(skin.id)).length,
     cuponesActivos: cupones.filter((cupon) => cupon.activo !== false).length,
     usuarios: usuarios.length,
+  }
+
+  const sellerOptions = useMemo(() => {
+    return usuarios.filter((user) => user.email)
+  }, [usuarios])
+
+  const resolveSeller = () => {
+    const term = sellerSearch.trim().toLowerCase()
+    if (!term) return null
+
+    const exactMatch = sellerOptions.find((user) => (
+      user.email?.toLowerCase() === term ||
+      user.username?.toLowerCase() === term ||
+      `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim().toLowerCase() === term
+    ))
+    if (exactMatch) return exactMatch
+
+    const matches = sellerOptions.filter((user) => getUserLabel(user).toLowerCase().includes(term))
+    return matches.length === 1 ? matches[0] : null
   }
 
   const handleCatalogSearch = async (event) => {
@@ -119,8 +152,13 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setMessage("")
 
     const parsedPrice = Number(price)
+    const seller = resolveSeller()
     if (!selectedCatalog) {
       setError("Elegi una skin del catalogo.")
+      return
+    }
+    if (!seller) {
+      setError("Elegi un vendedor de la lista de usuarios.")
       return
     }
     if (!parsedPrice || parsedPrice <= 0) {
@@ -130,13 +168,13 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
     setActionId("create-skin")
     try {
-      await crearSkinAdmin({
+      await crearSkinAdminParaUsuario(seller.email, {
         catalogoId: selectedCatalog.id,
         price: parsedPrice,
         discount: 0,
         stock: 1,
       })
-      setMessage("Publicacion admin creada.")
+      setMessage(`Publicacion admin creada para ${seller.email}.`)
       await loadAdminData()
     } catch (err) {
       setError(err.message)
@@ -233,8 +271,8 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
         </div>
 
         <div className="admin-stats">
-          <div><span>Publicadas</span><strong>{stats.skinsActivas}</strong></div>
-          <div><span>Inactivas</span><strong>{stats.skinsInactivas}</strong></div>
+          <div><span>Publicadas</span><strong>{stats.skinsPublicadas}</strong></div>
+          <div><span>No publicadas</span><strong>{stats.skinsNoPublicadas}</strong></div>
           <div><span>Cupones</span><strong>{stats.cuponesActivos}</strong></div>
           <div><span>Usuarios</span><strong>{stats.usuarios}</strong></div>
         </div>
@@ -249,7 +287,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               <div className="admin-section-header">
                 <div>
                   <h2>Publicaciones</h2>
-                  <p>El admin puede dar de baja cualquier skin publicada.</p>
+                  <p>Solo se muestran skins activas y publicadas.</p>
                 </div>
                 <input
                   type="search"
@@ -264,7 +302,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   <article className="admin-row" key={skin.id}>
                     <img src={skin.imageUrl} alt={skin.name} />
                     <div>
-                      <span>#{skin.id} ? {skin.catalogo?.weaponName ?? skin.game}</span>
+                      <span>#{skin.id} - {skin.catalogo?.weaponName ?? skin.game}</span>
                       <strong>{limpiarNombreSkin(skin.name)}</strong>
                     </div>
                     <span>${Number(skin.price ?? 0).toFixed(2)}</span>
@@ -280,6 +318,11 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                     </button>
                   </article>
                 ))}
+                {skinsFiltradas.length === 0 && (
+                  <p className="admin-empty-state">
+                    No hay publicaciones activas que coincidan con la busqueda.
+                  </p>
+                )}
               </div>
             </section>
 
@@ -293,12 +336,14 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
               <form className="admin-coupon-form" onSubmit={handleCreateCoupon}>
                 <input
+                  className="admin-coupon-code"
                   type="text"
                   value={couponForm.codigo}
                   onChange={(event) => setCouponForm((form) => ({ ...form, codigo: event.target.value }))}
                   placeholder="CODIGO"
                 />
                 <input
+                  className="admin-coupon-discount"
                   type="number"
                   min="1"
                   max="100"
@@ -307,6 +352,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   placeholder="%"
                 />
                 <input
+                  className="admin-coupon-date"
                   type="date"
                   value={couponForm.fechaExpiracion}
                   onChange={(event) => setCouponForm((form) => ({ ...form, fechaExpiracion: event.target.value }))}
@@ -329,7 +375,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   <article key={cupon.id} className="admin-coupon-row">
                     <div>
                       <strong>{cupon.codigo}</strong>
-                      <span>{Math.round((cupon.descuento ?? 0) * 100)}% ? {cupon.multiUso ? "multiuso" : "uso unico"}</span>
+                      <span>{Math.round((cupon.descuento ?? 0) * 100)}% - {cupon.multiUso ? "multiuso" : "uso unico"}</span>
                     </div>
                     <button
                       type="button"
@@ -379,6 +425,23 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               </div>
 
               <form className="admin-create-skin" onSubmit={handleCreateSkin}>
+                <label className="admin-seller-field">
+                  Vendedor
+                  <input
+                    type="text"
+                    list="admin-seller-options"
+                    value={sellerSearch}
+                    onChange={(event) => setSellerSearch(event.target.value)}
+                    placeholder="Username, nombre o email"
+                  />
+                </label>
+                <datalist id="admin-seller-options">
+                  {sellerOptions.map((user) => (
+                    <option key={user.id ?? user.email} value={user.email}>
+                      {getUserLabel(user)}
+                    </option>
+                  ))}
+                </datalist>
                 <input
                   type="number"
                   min="1"
@@ -397,6 +460,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
               <h2>Resumen</h2>
               <p>Ordenes registradas: <strong>{ordenes.length}</strong></p>
               <p>Admins: <strong>{usuarios.filter((user) => user.role === "ADMIN").length}</strong></p>
+
             </section>
           </div>
         )}

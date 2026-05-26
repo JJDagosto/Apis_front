@@ -151,7 +151,10 @@
 
 .admin-dev-check {
   align-items: center !important;
+  display: inline-flex;
   flex-direction: row !important;
+  gap: 8px;
+  margin: 0;
 }
 
 .admin-dev-check input {
@@ -358,13 +361,49 @@
 }
 
 .admin-coupon-form {
-  grid-template-columns: 1fr 88px 1fr;
+  align-items: center;
+  grid-template-areas:
+    "code discount"
+    "date date"
+    "multi submit";
+  grid-template-columns: minmax(0, 1fr) minmax(136px, auto);
 }
 
-.admin-coupon-form label,
-.admin-coupon-form button,
+.admin-coupon-code {
+  grid-area: code;
+}
+
+.admin-coupon-discount {
+  grid-area: discount;
+  text-align: center;
+}
+
+.admin-coupon-date {
+  grid-area: date;
+  min-width: 0;
+}
+
+.admin-coupon-form .admin-dev-check {
+  grid-area: multi;
+}
+
+.admin-coupon-form button {
+  grid-area: submit;
+  white-space: nowrap;
+  width: 100%;
+}
+
 .admin-create-skin button {
   grid-column: span 1;
+}
+
+.admin-seller-field {
+  color: rgba(255, 255, 255, 0.74);
+  display: grid;
+  font-size: 0.86rem;
+  font-weight: 700;
+  gap: 6px;
+  grid-column: 1 / -1;
 }
 
 .admin-coupon-row {
@@ -419,6 +458,16 @@
   color: rgba(255, 255, 255, 0.76);
 }
 
+.admin-empty-state {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 0;
+  padding: 18px;
+  text-align: center;
+}
+
 @media (max-width: 1000px) {
   .admin-dashboard,
   .admin-stats {
@@ -434,14 +483,29 @@
   .admin-dashboard,
   .admin-stats,
   .admin-row,
-  .admin-coupon-form,
   .admin-dev-search.compact,
   .admin-create-skin,
   .admin-section-header {
     grid-template-columns: 1fr;
   }
 
+  .admin-coupon-form {
+    grid-template-columns: minmax(0, 1fr) minmax(136px, auto);
+  }
+
   .admin-section-header {
     display: grid;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-coupon-form {
+    grid-template-areas:
+      "code"
+      "discount"
+      "date"
+      "multi"
+      "submit";
+    grid-template-columns: 1fr;
   }
 }

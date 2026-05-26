@@ -2,10 +2,10 @@
 
 const PriceMinMax = ({ precioMin, setPrecioMin, precioMax, setPrecioMax }) => {
   return (
-    <div className="text-start text-light body">
+    <div className="price-filter">
       <h6>Precio</h6>
-      <div className="d-flex flex-row gap-2">
-        <div>
+      <div className="price-filter-row">
+        <label>
           <span>Min.</span>
           <input
             type="number"
@@ -13,8 +13,8 @@ const PriceMinMax = ({ precioMin, setPrecioMin, precioMax, setPrecioMax }) => {
             value={precioMin}
             onChange={(e) => setPrecioMin(e.target.value)}
           />
-        </div>
-        <div>
+        </label>
+        <label>
           <span>Max.</span>
           <input
             type="number"
@@ -22,7 +22,7 @@ const PriceMinMax = ({ precioMin, setPrecioMin, precioMax, setPrecioMax }) => {
             value={precioMax}
             onChange={(e) => setPrecioMax(e.target.value)}
           />
-        </div>
+        </label>
       </div>
     </div>
   )

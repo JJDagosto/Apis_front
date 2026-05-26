@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react"
-import { FaPen, FaPause, FaTimes } from "react-icons/fa"
-import { despublicarPublicacion, editarPublicacion, getMisPublicaciones } from "../api/skins"
+import { FaPen, FaPause, FaPlay, FaTimes } from "react-icons/fa"
+import {
+  activarPublicacion,
+  despublicarPublicacion,
+  editarPublicacion,
+  getHistorialPublicaciones,
+  getMisPublicaciones,
+} from "../api/skins"
 import "./MisPublicaciones.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -9,16 +15,37 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function EstadoBadge({ active }) {
+const getEstadoPublicacion = (skin) => {
+  if (skin.estadoPublicacion) return skin.estadoPublicacion
+  return skin.active === false ? "PAUSADA" : "PUBLICADA"
+}
+
+const getEstadoLabel = (estado) => {
+  if (estado === "PAUSADA") return "Pausada"
+  if (estado === "RESERVADA") return "Reservada"
+  if (estado === "VENDIDA") return "Vendida"
+  return "Publicada"
+}
+
+const getEstadoClass = (estado) => {
+  if (estado === "PAUSADA") return "badge-pausada"
+  if (estado === "RESERVADA") return "badge-reservada"
+  if (estado === "VENDIDA") return "badge-vendida"
+  if (estado === "PUBLICADA") return "badge-publicada"
+  return "badge-default"
+}
+
+function EstadoBadge({ estado }) {
   return (
-    <span className={`pub-badge ${active === false ? "badge-pausada" : "badge-publicada"}`}>
-      {active === false ? "Dada de baja" : "Publicada"}
+    <span className={`pub-badge ${getEstadoClass(estado)}`}>
+      {getEstadoLabel(estado)}
     </span>
   )
 }
 
 function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
   const [publicaciones, setPublicaciones] = useState([])
+  const [historial, setHistorial] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -31,8 +58,12 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     setError("")
     setLoading(true)
     try {
-      const data = await getMisPublicaciones()
-      setPublicaciones(data)
+      const [publicacionesData, historialData] = await Promise.all([
+        getMisPublicaciones(),
+        getHistorialPublicaciones(),
+      ])
+      setPublicaciones(publicacionesData)
+      setHistorial(historialData)
       await onPublicationsChange?.()
     } catch (err) {
       setError(err.message)
@@ -59,8 +90,8 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     )
   }
 
-  const activas = publicaciones.filter((skin) => skin.active !== false)
-  const dadasDeBaja = publicaciones.filter((skin) => skin.active === false)
+  const activas = publicaciones.filter((skin) => getEstadoPublicacion(skin) === "PUBLICADA")
+  const pausadas = publicaciones.filter((skin) => getEstadoPublicacion(skin) === "PAUSADA")
 
   const handleDespublicar = async (skin) => {
     setError("")
@@ -69,6 +100,21 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     try {
       const msg = await despublicarPublicacion(skin.id)
       setSuccess(msg || "Publicacion dada de baja.")
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const handleActivar = async (skin) => {
+    setError("")
+    setSuccess("")
+    setActionId(skin.id)
+    try {
+      const msg = await activarPublicacion(skin.id)
+      setSuccess(msg || "Publicacion reactivada.")
       await loadData()
     } catch (err) {
       setError(err.message)
@@ -118,12 +164,29 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
 
   const renderAcciones = (skin) => {
     const disabled = actionId === skin.id
+    const estado = getEstadoPublicacion(skin)
+
+    if (estado === "PAUSADA") {
+      return (
+        <div className="pub-actions">
+          <button
+            type="button"
+            className="pub-btn pub-btn-play"
+            disabled={disabled}
+            onClick={() => handleActivar(skin)}
+          >
+            <FaPlay /> {disabled ? "..." : "Reactivar"}
+          </button>
+        </div>
+      )
+    }
+
     return (
       <div className="pub-actions">
         <button
           type="button"
           className="pub-btn pub-btn-edit"
-          disabled={disabled || skin.active === false}
+          disabled={disabled}
           onClick={() => openEdit(skin)}
         >
           <FaPen /> Editar
@@ -132,7 +195,7 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
         <button
           type="button"
           className="pub-btn pub-btn-pause"
-          disabled={disabled || skin.active === false}
+          disabled={disabled}
           onClick={() => handleDespublicar(skin)}
         >
           <FaPause /> {disabled ? "..." : "Dar de baja"}
@@ -144,12 +207,13 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
   const renderCard = (skin, conAcciones) => {
     const precioFinal = skin.finalPrice ?? skin.price
     const tieneDescuento = (skin.discount ?? 0) > 0
+    const estado = getEstadoPublicacion(skin)
 
     return (
       <article className="pub-card" key={skin.id}>
         <div className="pub-image-wrap">
           <img src={skin.imageUrl} alt={skin.name} />
-          <EstadoBadge active={skin.active} />
+          <EstadoBadge estado={estado} />
         </div>
 
         <div className="pub-card-body">
@@ -195,12 +259,23 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
           </section>
 
           <section className="pub-section">
-            <h2>Dadas de baja ({dadasDeBaja.length})</h2>
-            {dadasDeBaja.length === 0 ? (
-              <p className="pub-message">No tenes publicaciones dadas de baja.</p>
+            <h2>Pausadas ({pausadas.length})</h2>
+            {pausadas.length === 0 ? (
+              <p className="pub-message">No tenes publicaciones pausadas.</p>
             ) : (
               <div className="pub-grid">
-                {dadasDeBaja.map((skin) => renderCard(skin, false))}
+                {pausadas.map((skin) => renderCard(skin, true))}
+              </div>
+            )}
+          </section>
+
+          <section className="pub-section">
+            <h2>Historial ({historial.length})</h2>
+            {historial.length === 0 ? (
+              <p className="pub-message">Todavia no tenes publicaciones vendidas o reservadas.</p>
+            ) : (
+              <div className="pub-grid">
+                {historial.map((skin) => renderCard(skin, false))}
               </div>
             )}
           </section>

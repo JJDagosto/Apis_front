@@ -65,6 +65,66 @@
   margin-bottom: 6px;
 }
 
+.trade-url-guide {
+  background-color: rgba(255, 202, 44, 0.08);
+  border: 1px solid rgba(255, 202, 44, 0.22);
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.trade-url-guide h3 {
+  color: #ffca2c;
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.trade-url-guide ol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+  padding-left: 20px;
+}
+
+.trade-url-guide li {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.trade-url-guide strong {
+  color: white;
+}
+
+.trade-url-guide a {
+  color: #ffca2c;
+  overflow-wrap: anywhere;
+}
+
+.trade-url-example {
+  background-color: #09031f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px;
+}
+
+.trade-url-example span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.85rem;
+}
+
+.trade-url-example code {
+  background-color: rgba(255, 202, 44, 0.08);
+  border: 1px solid rgba(255, 202, 44, 0.2);
+  border-radius: 6px;
+  color: #ffe38a;
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+}
+
 .profile-form button,
 .profile-panel > button {
   background-color: #ffca2c;

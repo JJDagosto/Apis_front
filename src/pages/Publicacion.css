@@ -132,6 +132,17 @@
   color: #ffca2c;
 }
 
+.publication-profile-link {
+  background: transparent;
+  border: 1px solid #ffca2c;
+  border-radius: 6px;
+  color: #ffca2c;
+  font-weight: 700;
+  margin: -12px 0 24px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
 .publication-specs {
   display: grid;
   gap: 12px;

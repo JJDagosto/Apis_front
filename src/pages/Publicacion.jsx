@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-icons/fa"
 import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
 import { despublicarPublicacion, editarPublicacion } from "../api/skins"
+import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Publicacion.css"
 
 const URL = "http://localhost:4003"
@@ -16,6 +17,7 @@ function Publicacion({
   skinId,
   currentUser,
   goToLogin,
+  goToPerfil,
   goToCarrito,
   volverAlCatalogo,
   onCartChange,
@@ -76,6 +78,12 @@ function Publicacion({
       return
     }
 
+    const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
+    if (tradeUrlIssue) {
+      setError(`${tradeUrlIssue} Completa tu perfil para que el bot pueda enviarte la oferta de intercambio.`)
+      return
+    }
+
     setAddingCart(true)
 
     try {
@@ -87,7 +95,7 @@ function Publicacion({
         setCartMessage("Skin agregada al carrito.")
       }
 
-      await onCartChange?.()
+      await onCartChange?.({ resetCheckout: true })
     } catch (error) {
       setError(error.message)
     } finally {
@@ -144,6 +152,25 @@ function Publicacion({
     }
   }
 
+  const handleBuyNow = () => {
+    setError("")
+    setCartMessage("")
+    setOwnerMessage("")
+
+    if (!currentUser) {
+      goToLogin()
+      return
+    }
+
+    const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
+    if (tradeUrlIssue) {
+      setError(`${tradeUrlIssue} Completa tu perfil para que el bot pueda enviarte la oferta de intercambio.`)
+      return
+    }
+
+    goToCarrito()
+  }
+
   if (loading) {
     return <p className="publication-message">Cargando publicacion...</p>
   }
@@ -174,9 +201,7 @@ function Publicacion({
   const precioFinal = skin.finalPrice ?? skin.price
   const tieneDescuento = skin.discount > 0
   const vendedor =
-    skin.vendedor?.username ??
-    skin.vendedor?.realUsername ??
-    skin.vendedor?.email ??
+    skin.vendedorUsername ??
     (isOwnPublication ? "Tu publicacion" : "Vendedor no disponible")
 
   return (
@@ -253,7 +278,7 @@ function Publicacion({
             </form>
           ) : (
             <div className="publication-actions">
-              <button className="publication-buy" onClick={goToCarrito}>
+              <button className="publication-buy" onClick={handleBuyNow}>
                 <FaCreditCard /> Comprar ahora
               </button>
               <button
@@ -269,10 +294,16 @@ function Publicacion({
             </div>
           )}
 
+          {error?.includes("Steam Trade URL") && (
+            <button className="publication-profile-link" type="button" onClick={goToPerfil}>
+              Completar perfil
+            </button>
+          )}
+
           <dl className="publication-specs">
             <div>
               <dt>Estado</dt>
-              <dd>{skin.catalogo?.exteriorName ?? skin.exterior}</dd>
+              <dd>{skin.catalogo?.exteriorName ?? skin.exterior ?? "-"}</dd>
             </div>
             <div>
               <dt>Rareza</dt>

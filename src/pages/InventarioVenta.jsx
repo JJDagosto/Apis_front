@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { FaPen, FaSyncAlt, FaTag, FaTimes } from "react-icons/fa"
 import { getInventario, publicarInventarioItem, syncInventario } from "../api/inventario"
+import { getSellingSetupIssues } from "../utils/tradeProfile"
 import "./InventarioVenta.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -9,7 +10,7 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublications = [], onMyPublicationsChange }) {
+function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, myPublications = [], onMyPublicationsChange }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -52,6 +53,8 @@ function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublicatio
   }
 
   const cs2Items = items.filter((item) => item.catalogo)
+  const sellingSetupIssues = getSellingSetupIssues(currentUser)
+  const canSellFromProfile = sellingSetupIssues.length === 0
 
   const handleSync = async () => {
     setError("")
@@ -70,6 +73,11 @@ function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublicatio
   }
 
   const openPublishModal = (item) => {
+    if (!canSellFromProfile) {
+      setError("Completa tu Steam Trade URL y alias de cobro en Mi cuenta antes de publicar.")
+      return
+    }
+
     setSelectedItem(item)
     setPrice("")
     setError("")
@@ -88,6 +96,11 @@ function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublicatio
     setSuccess("")
 
     const parsedPrice = Number(price)
+    if (!canSellFromProfile) {
+      setError("Completa tu Steam Trade URL y alias de cobro en Mi cuenta antes de publicar.")
+      return
+    }
+
     if (!parsedPrice || parsedPrice <= 0) {
       setError("El precio debe ser mayor a 0.")
       return
@@ -163,6 +176,21 @@ function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublicatio
         </p>
       </section>
 
+      {!canSellFromProfile && (
+        <section className="inventory-setup-warning">
+          <strong>Faltan datos para vender</strong>
+          <p>
+            Para publicar skins, el bot necesita tu Steam Trade URL y tambien necesitamos tu alias de cobro para liquidar ventas.
+          </p>
+          <ul>
+            {sellingSetupIssues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+          <button type="button" onClick={goToPerfil}>Completar perfil</button>
+        </section>
+      )}
+
       {error && <p className="inventory-error">{error}</p>}
       {success && <p className="inventory-success">{success}</p>}
 
@@ -199,7 +227,7 @@ function InventarioVenta({ currentUser, goToLogin, openPublicacion, myPublicatio
                 <button
                   type="button"
                   className={item.publicado ? "inventory-manage" : ""}
-                  disabled={!item.publicado && !canPublish(item)}
+                  disabled={!item.publicado && (!canPublish(item) || !canSellFromProfile)}
                   onClick={() => item.publicado ? handlePublishedItem(item) : openPublishModal(item)}
                 >
                   {item.publicado ? <FaPen /> : <FaTag />}
