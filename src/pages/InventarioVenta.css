@@ -256,3 +256,25 @@
   background-color: #ffca2c;
   color: #0c0524;
 }
+
+.publish-modal-checks {
+  display: flex;
+  gap: 20px;
+}
+
+.publish-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.publish-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #ffca2c;
+}

@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   crearPreferenciaDesdeCarrito,
   procesarPagoTarjetaPrueba,
+  sincronizarPagosPendientes,
+  sincronizarPagoOrden,
 } from "../api/payments"
+import { vaciarCarrito } from "../api/carrito"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Checkout.css"
 
@@ -11,6 +14,7 @@ function Checkout({
   goToLogin,
   goToCatalogo,
   goToPerfil,
+  goToMisPublicaciones,
   cupon,
   checkoutSession,
   onCheckoutSessionChange,
@@ -21,6 +25,8 @@ function Checkout({
   const [mercadoPagoUrl, setMercadoPagoUrl] = useState("")
   const [brickReady, setBrickReady] = useState(false) // ya tenemos publicKey y orden
   const [loading, setLoading] = useState(true)
+  const [syncingPayment, setSyncingPayment] = useState(false)
+  const syncingRef = useRef(false)
   const [testProcessing, setTestProcessing] = useState(false)
   const [error, setError] = useState("")
   const [resultado, setResultado] = useState(null) // { status, statusDetail }
@@ -40,18 +46,32 @@ function Checkout({
   const hydrateCheckout = (data) => {
     const monto = data.order?.totalFinal ?? data.order?.totalPrice
     const isTestKey = data.publicKey?.startsWith("TEST-")
+    const preferSandbox = data.checkoutMode === "sandbox" || isTestKey
+    const serverCheckoutUrl = data.checkoutUrl || ""
+    const usableServerCheckoutUrl =
+      preferSandbox === serverCheckoutUrl.includes("sandbox.mercadopago")
+        ? serverCheckoutUrl
+        : ""
     const checkoutUrl =
-      (isTestKey ? data.sandboxInitPoint : data.initPoint) ||
+      usableServerCheckoutUrl ||
+      (preferSandbox ? data.sandboxInitPoint : data.initPoint) ||
       data.initPoint ||
       data.sandboxInitPoint ||
       (data.preferenceId
-        ? `${isTestKey ? "https://sandbox.mercadopago.com.ar" : "https://www.mercadopago.com.ar"}/checkout/v1/redirect?pref_id=${data.preferenceId}`
+        ? `${preferSandbox ? "https://sandbox.mercadopago.com.ar" : "https://www.mercadopago.com.ar"}/checkout/v1/redirect?pref_id=${data.preferenceId}`
         : "")
 
     setOrder(data.order)
     setAmount(monto)
     setMercadoPagoUrl(checkoutUrl)
     setBrickReady(true)
+  }
+
+  const completeApprovedPayment = async (statusDetail) => {
+    setResultado({ status: "approved", statusDetail })
+    onCheckoutSessionChange?.(null)
+    try { await vaciarCarrito() } catch { /* el pago ya fue aprobado; no bloqueamos la confirmacion */ }
+    await onCartChange?.({ resetCheckout: true })
   }
 
   // 1) Al entrar: creamos la orden desde el carrito y traemos publicKey + preferenceId.
@@ -75,12 +95,26 @@ function Checkout({
       setLoading(true)
       setError("")
       try {
+        const pendingSync = await sincronizarPagosPendientes()
+        const pendingApproved =
+          pendingSync.status === "approved" || pendingSync.order?.paymentStatus === "PAID"
+        if (pendingApproved) {
+          if (!cancelado) {
+            await completeApprovedPayment(pendingSync.statusDetail)
+          }
+          return
+        }
+
         const reusableSession =
           checkoutSession?.email === currentUser.email &&
           checkoutSession?.cupon === (cupon || "") &&
           checkoutSession?.data?.order?.id &&
           checkoutSession?.data?.preferenceId &&
-          checkoutSession?.data?.publicKey
+          checkoutSession?.data?.publicKey &&
+          !(
+            checkoutSession.data.publicKey.startsWith("APP_USR-") &&
+            checkoutSession.data.checkoutUrl?.includes("sandbox.mercadopago")
+          )
 
         if (reusableSession) {
           if (!cancelado) hydrateCheckout(checkoutSession.data)
@@ -109,6 +143,52 @@ function Checkout({
     setTestCardForm((current) => ({ ...current, [field]: value }))
   }
 
+  const syncPaymentStatus = async () => {
+    if (!order?.id || resultado || syncingRef.current) return
+    syncingRef.current = true
+
+    try {
+      setSyncingPayment(true)
+      const resp = await sincronizarPagoOrden(order.id)
+      let approved = resp.status === "approved" || resp.order?.paymentStatus === "PAID"
+      let approvedResp = resp
+      if (!approved) {
+        const pendingResp = await sincronizarPagosPendientes()
+        approved = pendingResp.status === "approved" || pendingResp.order?.paymentStatus === "PAID"
+        approvedResp = pendingResp
+      }
+      if (approved) {
+        await completeApprovedPayment(approvedResp.statusDetail)
+      }
+    } catch (err) {
+      setError(err.message || "No se pudo verificar el pago todavia.")
+    } finally {
+      setSyncingPayment(false)
+      syncingRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    if (!order?.id || resultado) return
+
+    const handleFocus = () => {
+      syncPaymentStatus()
+    }
+    const handleVisibility = () => {
+      if (!document.hidden) syncPaymentStatus()
+    }
+
+    window.addEventListener("focus", handleFocus)
+    document.addEventListener("visibilitychange", handleVisibility)
+    const timer = window.setInterval(syncPaymentStatus, 5000)
+
+    return () => {
+      window.removeEventListener("focus", handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibility)
+      window.clearInterval(timer)
+    }
+  }, [order?.id, resultado])
+
   const handleTestCardPayment = async (event) => {
     event.preventDefault()
     setError("")
@@ -122,10 +202,10 @@ function Checkout({
         installments: Number(testCardForm.installments) || 1,
       })
 
-      setResultado({ status: resp.status, statusDetail: resp.statusDetail })
       if (resp.status === "approved") {
-        onCheckoutSessionChange?.(null)
-        await onCartChange?.()
+        await completeApprovedPayment(resp.statusDetail)
+      } else {
+        setResultado({ status: resp.status, statusDetail: resp.statusDetail })
       }
     } catch (err) {
       setError(err.message)
@@ -157,14 +237,27 @@ function Checkout({
         <div className="checkout-box">
           {aprobado && (
             <>
-              <h1 className="checkout-ok">Pago aprobado</h1>
-              <p>Tu compra se proceso correctamente. La confirmacion final llega por webhook.</p>
+              <div className="checkout-success-icon">✓</div>
+              <h1 className="checkout-ok">¡Pago aprobado!</h1>
+              <p className="checkout-success-desc">
+                Tu compra se proceso correctamente. En unos momentos
+                vas a poder ver tu skin en tus publicaciones.
+              </p>
+              <button type="button" className="checkout-action-primary" onClick={goToMisPublicaciones}>
+                Ver mis publicaciones
+              </button>
+              <button type="button" className="checkout-secondary" onClick={goToCatalogo}>
+                Seguir comprando
+              </button>
             </>
           )}
           {pendiente && (
             <>
               <h1 className="checkout-pending">Pago pendiente</h1>
               <p>El pago quedo en revision. Te avisaremos cuando se confirme.</p>
+              <button type="button" className="checkout-secondary" onClick={goToCatalogo}>
+                Volver al catalogo
+              </button>
             </>
           )}
           {!aprobado && !pendiente && (
@@ -174,11 +267,11 @@ function Checkout({
               <button type="button" onClick={() => setResultado(null)}>
                 Reintentar
               </button>
+              <button type="button" className="checkout-secondary" onClick={goToCatalogo}>
+                Volver al catalogo
+              </button>
             </>
           )}
-          <button type="button" className="checkout-secondary" onClick={goToCatalogo}>
-            Volver al catalogo
-          </button>
         </div>
       </main>
     )
@@ -205,14 +298,27 @@ function Checkout({
             </div>
 
             {mercadoPagoUrl ? (
-              <a
-                className="checkout-mp-button"
-                href={mercadoPagoUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Pagar con Mercado Pago
-              </a>
+              <>
+                <a
+                  className="checkout-mp-button"
+                  href={mercadoPagoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Pagar con Mercado Pago
+                </a>
+                {mercadoPagoUrl.includes("sandbox.mercadopago") && (
+                  <p className="checkout-sandbox-note">Modo prueba de Mercado Pago</p>
+                )}
+                <button
+                  type="button"
+                  className="checkout-secondary"
+                  onClick={syncPaymentStatus}
+                  disabled={syncingPayment}
+                >
+                  {syncingPayment ? "Verificando pago..." : "Ya pague, verificar pago"}
+                </button>
+              </>
             ) : (
               <p className="checkout-error">
                 No se pudo generar el link de Mercado Pago para esta orden.

@@ -204,6 +204,7 @@ return (
           goToLogin={() => setCurrentPage('login')}
           goToCatalogo={() => setCurrentPage('catalogo')}
           goToPerfil={() => setCurrentPage('perfil')}
+          goToMisPublicaciones={() => setCurrentPage('misPublicaciones')}
           cupon={checkoutCupon}
           checkoutSession={checkoutSession}
           onCheckoutSessionChange={setCheckoutSession}

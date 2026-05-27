@@ -12,10 +12,10 @@ export const syncInventario = async () => {
   return response.message
 }
 
-export const publicarInventarioItem = async (itemId, { price, discount = 0 }) => {
+export const publicarInventarioItem = async (itemId, { price, discount = 0, vendible = true, intercambiable = true }) => {
   const response = await apiRequest(`/inventario/${itemId}/publicar`, {
     method: "POST",
-    body: JSON.stringify({ price, discount }),
+    body: JSON.stringify({ price, discount, vendible, intercambiable }),
   })
   return response.data
 }

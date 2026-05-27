@@ -17,6 +17,8 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
   const [publishing, setPublishing] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [price, setPrice] = useState("")
+  const [vendible, setVendible] = useState(true)
+  const [intercambiable, setIntercambiable] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -80,6 +82,8 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
 
     setSelectedItem(item)
     setPrice("")
+    setVendible(true)
+    setIntercambiable(true)
     setError("")
     setSuccess("")
   }
@@ -106,10 +110,15 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
       return
     }
 
+    if (!vendible && !intercambiable) {
+      setError("La skin debe ser vendible, intercambiable o ambas.")
+      return
+    }
+
     setPublishing(true)
 
     try {
-      await publicarInventarioItem(selectedItem.id, { price: parsedPrice })
+      await publicarInventarioItem(selectedItem.id, { price: parsedPrice, vendible, intercambiable })
       setSuccess("Publicacion creada correctamente.")
       await onMyPublicationsChange?.()
       closePublishModal()
@@ -262,6 +271,25 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
                 required
               />
             </label>
+
+            <div className="publish-modal-checks">
+              <label className="publish-check">
+                <input
+                  type="checkbox"
+                  checked={vendible}
+                  onChange={(event) => setVendible(event.target.checked)}
+                />
+                Vendible
+              </label>
+              <label className="publish-check">
+                <input
+                  type="checkbox"
+                  checked={intercambiable}
+                  onChange={(event) => setIntercambiable(event.target.checked)}
+                />
+                Intercambiable
+              </label>
+            </div>
 
             <div className="publish-warning">
               <strong>Antes de publicar</strong>

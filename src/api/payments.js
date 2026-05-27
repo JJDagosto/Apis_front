@@ -60,3 +60,19 @@ export const procesarPagoTarjetaPrueba = async (orderId, payload) => {
   )
   return response.data
 }
+
+export const sincronizarPagoOrden = async (orderId) => {
+  const response = await apiRequest(
+    `/payments/bricks/orders/${orderId}/sync`,
+    { method: "POST" }
+  )
+  return response.data
+}
+
+export const sincronizarPagosPendientes = async () => {
+  const response = await apiRequest(
+    "/payments/bricks/orders/sync-pending",
+    { method: "POST" }
+  )
+  return response.data
+}

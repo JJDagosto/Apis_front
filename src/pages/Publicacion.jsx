@@ -120,6 +120,8 @@ function Publicacion({
       const updated = await editarPublicacion(skin.id, {
         price,
         discount: skin.discount ?? 0,
+        vendible: skin.vendible !== false,
+        intercambiable: skin.intercambiable !== false,
       })
       setSkin(updated ?? { ...skin, price })
       setOwnerMessage("Precio actualizado.")

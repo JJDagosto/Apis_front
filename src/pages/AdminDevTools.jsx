@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { FaBan, FaChevronLeft, FaChevronRight, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
+import { FaChevronLeft, FaChevronRight, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
 import {
   buscarCatalogo,
   crearCuponAdmin,
@@ -233,7 +233,9 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
   }
 
   const handleDeactivateSkin = async (skin) => {
-    const confirmed = window.confirm(`Dar de baja la publicacion #${skin.id}?`)
+    const confirmed = window.confirm(
+      `Eliminar la publicacion #${skin.id} del catalogo? La skin no se elimina del inventario del usuario.`
+    )
     if (!confirmed) return
 
     setError("")
@@ -241,7 +243,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setActionId(`skin-${skin.id}`)
     try {
       const msg = await inactivarSkinAdmin(skin.id)
-      setMessage(msg || "Skin inactivada.")
+      setMessage(msg || "Publicacion eliminada.")
       await loadAdminData()
     } catch (err) {
       setError(err.message)
@@ -369,7 +371,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                       disabled={skin.active === false || actionId === `skin-${skin.id}`}
                       onClick={() => handleDeactivateSkin(skin)}
                     >
-                      <FaBan /> Baja
+                      <FaTrash /> Eliminar
                     </button>
                   </article>
                 ))}

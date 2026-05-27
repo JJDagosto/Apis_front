@@ -10,13 +10,22 @@ export const getHistorialPublicaciones = async () => {
   return response.data ?? []
 }
 
-export const editarPublicacion = async (skinId, { price, discount = 0 }) => {
+export const getMisCompras = async () => {
+  const response = await apiRequest("/order/me")
+  return (response.data ?? []).filter(
+    (o) => o.operationType === "PURCHASE" && o.tradeStatus === "COMPLETED"
+  )
+}
+
+export const editarPublicacion = async (skinId, { price, discount = 0, vendible = true, intercambiable = true }) => {
   const response = await apiRequest(`/skins/${skinId}`, {
     method: "PUT",
     body: JSON.stringify({
       price,
       discount,
       stock: 1,
+      vendible,
+      intercambiable,
     }),
   })
   return response.data

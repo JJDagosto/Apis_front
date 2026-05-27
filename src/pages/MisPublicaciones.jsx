@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
 import { FaPen, FaPause, FaPlay, FaTimes } from "react-icons/fa"
+import { sincronizarPagosPendientes } from "../api/payments"
 import {
   activarPublicacion,
   despublicarPublicacion,
   editarPublicacion,
   getHistorialPublicaciones,
+  getMisCompras,
   getMisPublicaciones,
 } from "../api/skins"
 import "./MisPublicaciones.css"
@@ -24,6 +26,7 @@ const getEstadoLabel = (estado) => {
   if (estado === "PAUSADA") return "Pausada"
   if (estado === "RESERVADA") return "Reservada"
   if (estado === "VENDIDA") return "Vendida"
+  if (estado === "ELIMINADA_ADMIN") return "Eliminada por admin"
   return "Publicada"
 }
 
@@ -31,6 +34,7 @@ const getEstadoClass = (estado) => {
   if (estado === "PAUSADA") return "badge-pausada"
   if (estado === "RESERVADA") return "badge-reservada"
   if (estado === "VENDIDA") return "badge-vendida"
+  if (estado === "ELIMINADA_ADMIN") return "badge-eliminada-admin"
   if (estado === "PUBLICADA") return "badge-publicada"
   return "badge-default"
 }
@@ -46,24 +50,34 @@ function EstadoBadge({ estado }) {
 function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
   const [publicaciones, setPublicaciones] = useState([])
   const [historial, setHistorial] = useState([])
+  const [compras, setCompras] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [actionId, setActionId] = useState(null)
   const [editItem, setEditItem] = useState(null)
   const [editPrice, setEditPrice] = useState("")
+  const [editVendible, setEditVendible] = useState(true)
+  const [editIntercambiable, setEditIntercambiable] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
     setError("")
     setLoading(true)
     try {
-      const [publicacionesData, historialData] = await Promise.all([
+      // Sincronizamos pagos pendientes primero: si el usuario compró
+      // y el webhook no llegó, esto marca la orden como PAID en la BD
+      // para que el scheduler pueda procesarla.
+      try { await sincronizarPagosPendientes() } catch { /* no crítico */ }
+
+      const [publicacionesData, historialData, comprasData] = await Promise.all([
         getMisPublicaciones(),
         getHistorialPublicaciones(),
+        getMisCompras(),
       ])
       setPublicaciones(publicacionesData)
       setHistorial(historialData)
+      setCompras(comprasData)
       await onPublicationsChange?.()
     } catch (err) {
       setError(err.message)
@@ -128,6 +142,8 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     setSuccess("")
     setEditItem(skin)
     setEditPrice(String(skin.price ?? ""))
+    setEditVendible(skin.vendible !== false)
+    setEditIntercambiable(skin.intercambiable !== false)
   }
 
   const closeEdit = () => {
@@ -145,12 +161,18 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
       setError("El precio debe ser mayor a 0.")
       return
     }
+    if (!editVendible && !editIntercambiable) {
+      setError("La skin debe ser vendible, intercambiable o ambas.")
+      return
+    }
 
     setSaving(true)
     try {
       await editarPublicacion(editItem.id, {
         price,
         discount: editItem.discount ?? 0,
+        vendible: editVendible,
+        intercambiable: editIntercambiable,
       })
       setSuccess("Publicacion actualizada.")
       setEditItem(null)
@@ -175,7 +197,7 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
             disabled={disabled}
             onClick={() => handleActivar(skin)}
           >
-            <FaPlay /> {disabled ? "..." : "Reactivar"}
+            <FaPlay /> {disabled ? "..." : "Activar"}
           </button>
         </div>
       )
@@ -202,6 +224,24 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
         </button>
       </div>
     )
+  }
+
+  const renderCompraCard = (orden) => {
+    return orden.orderDetailResponses?.map((item) => (
+      <article className="pub-card" key={`${orden.id}-${item.skinId}`}>
+        <div className="pub-image-wrap">
+          {item.imageUrl && <img src={item.imageUrl} alt={item.skinName} />}
+          <span className="pub-badge badge-comprada">Comprada</span>
+        </div>
+        <div className="pub-card-body">
+          <h2>{limpiarNombreSkin(item.skinName ?? "")}</h2>
+          <strong>${(item.unitPrice ?? 0).toFixed(2)}</strong>
+          <p className="pub-exterior" style={{ marginTop: 4, fontSize: "0.8rem", color: "#b9b9c6" }}>
+            Orden #{orden.id}
+          </p>
+        </div>
+      </article>
+    ))
   }
 
   const renderCard = (skin, conAcciones) => {
@@ -270,6 +310,17 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
           </section>
 
           <section className="pub-section">
+            <h2>Mis compras ({compras.reduce((acc, o) => acc + (o.orderDetailResponses?.length ?? 0), 0)})</h2>
+            {compras.length === 0 ? (
+              <p className="pub-message">Todavia no compraste ninguna skin.</p>
+            ) : (
+              <div className="pub-grid">
+                {compras.map((orden) => renderCompraCard(orden))}
+              </div>
+            )}
+          </section>
+
+          <section className="pub-section">
             <h2>Historial ({historial.length})</h2>
             {historial.length === 0 ? (
               <p className="pub-message">Todavia no tenes publicaciones vendidas o reservadas.</p>
@@ -303,6 +354,25 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
                 required
               />
             </label>
+
+            <div className="pub-modal-checks">
+              <label className="pub-check">
+                <input
+                  type="checkbox"
+                  checked={editVendible}
+                  onChange={(e) => setEditVendible(e.target.checked)}
+                />
+                Vendible
+              </label>
+              <label className="pub-check">
+                <input
+                  type="checkbox"
+                  checked={editIntercambiable}
+                  onChange={(e) => setEditIntercambiable(e.target.checked)}
+                />
+                Intercambiable
+              </label>
+            </div>
 
             <button type="submit" className="pub-btn pub-btn-save" disabled={saving}>
               {saving ? "Guardando..." : "Guardar cambios"}
