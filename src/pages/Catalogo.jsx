@@ -1,25 +1,27 @@
-﻿import { useEffect, useState } from "react"
-import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
+﻿import { useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
+import { resetCheckout } from "../Redux/checkoutSlice"
 import CatalogFilters from "../components/CatalogFilters.jsx"
 import Card from "../components/Card.jsx"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Catalogo.css"
 
-const URL = "http://localhost:4003"
-
 function Catalogo({
   openPublicacion,
-  currentUser,
   goToLogin,
   goToPerfil,
-  onCartChange,
-  cartItems = [],
-  myPublications = [],
   searchTerm = "",
   onClearSearch,
 }) {
-  const [allSkins, setAllSkins] = useState([])
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch()
+  const { items: allSkins, loading, error: catalogError } = useSelector(
+    (state) => state.catalogo,
+  )
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const carrito = useSelector((state) => state.carrito.data)
+  const cartItems = carrito?.items ?? []
+  const myPublications = useSelector((state) => state.publicaciones.items)
   const [error, setError] = useState("")
   const [cartMessage, setCartMessage] = useState("")
   const [addingSkinId, setAddingSkinId] = useState(null)
@@ -39,19 +41,6 @@ function Catalogo({
       .replace(/^.*\|\s*/, "")
       .replace(/\s*\([^)]*\)$/, "")
   }
-
-  useEffect(() => {
-    setLoading(true)
-
-    fetch(`${URL}/skins/get/all`)
-      .then((res) => res.json())
-      .then((json) => setAllSkins(json.data ?? []))
-      .catch((error) => {
-        console.error(error)
-        setError("No se pudo cargar el catalogo.")
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   const setFilter = (filterName, value) => {
     setFilters((currentFilters) => ({
@@ -103,14 +92,14 @@ function Catalogo({
 
     try {
       if (cartItem) {
-        await eliminarItemCarrito(cartItem.id)
+        await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
         setCartMessage("Skin removida del carrito.")
       } else {
-        await agregarAlCarrito(skinId)
+        await dispatch(agregarAlCarrito(skinId)).unwrap()
         setCartMessage("Skin agregada al carrito.")
       }
 
-      await onCartChange?.({ resetCheckout: true })
+      dispatch(resetCheckout())
     } catch (error) {
       setError(error.message)
     } finally {
@@ -146,7 +135,7 @@ function Catalogo({
     const cumpleVendible =
       !filters.vendible || skin.vendible === true
 
-    return (
+    return skin.active !== false && (
       cumpleBusqueda &&
       cumpleExterior &&
       cumpleRareza &&
@@ -157,6 +146,8 @@ function Catalogo({
       cumpleVendible
     )
   })
+
+  const displayError = error || catalogError
 
   const skinsOrdenadas = skinsFiltradas.slice().sort((a, b) => {
     switch (orden) {
@@ -211,14 +202,14 @@ function Catalogo({
             <div className="d-flex overflow-auto gap-3 flex-wrap justify-content-start">
               {loading && <p className="catalog-message">Cargando catalogo...</p>}
 
-              {!loading && error && <p className="catalog-message">{error}</p>}
+              {!loading && displayError && <p className="catalog-message">{displayError}</p>}
 
-              {!loading && !error && skinsOrdenadas.length === 0 && (
+              {!loading && !displayError && skinsOrdenadas.length === 0 && (
                 <p className="catalog-message">No se encontraron resultados.</p>
               )}
 
               {!loading &&
-                !error &&
+                !displayError &&
                 skinsOrdenadas.map((skin) => (
                   <Card
                     key={skin.id}

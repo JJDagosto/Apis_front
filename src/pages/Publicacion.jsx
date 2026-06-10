@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react"
 import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-icons/fa"
-import { agregarAlCarrito, eliminarItemCarrito } from "../api/carrito"
-import { despublicarPublicacion, editarPublicacion } from "../api/skins"
+import { useDispatch, useSelector } from "react-redux"
+import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
+import { resetCheckout } from "../Redux/checkoutSlice"
+import { despublicarPublicacion, editarPublicacion } from "../Redux/publicacionesSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Publicacion.css"
-
-const URL = "http://localhost:4003"
 
 const limpiarNombreSkin = (nombre = "") => {
   return nombre
@@ -15,18 +15,20 @@ const limpiarNombreSkin = (nombre = "") => {
 
 function Publicacion({
   skinId,
-  currentUser,
   goToLogin,
   goToPerfil,
   goToCarrito,
   volverAlCatalogo,
-  onCartChange,
-  cartItems = [],
-  myPublications = [],
-  onMyPublicationsChange,
 }) {
-  const [skin, setSkin] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const carrito = useSelector((state) => state.carrito.data)
+  const cartItems = carrito?.items ?? []
+  const myPublications = useSelector((state) => state.publicaciones.items)
+  const loading = useSelector((state) => state.catalogo.loading)
+  const skin = useSelector((state) =>
+    state.catalogo.items.find((item) => item.id === skinId),
+  )
   const [addingCart, setAddingCart] = useState(false)
   const [savingOwner, setSavingOwner] = useState(false)
   const [deactivating, setDeactivating] = useState(false)
@@ -34,28 +36,6 @@ function Publicacion({
   const [error, setError] = useState("")
   const [cartMessage, setCartMessage] = useState("")
   const [ownerMessage, setOwnerMessage] = useState("")
-
-  useEffect(() => {
-    if (!skinId) {
-      setError("No se encontro la publicacion.")
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    setError("")
-    setCartMessage("")
-    setOwnerMessage("")
-
-    fetch(`${URL}/skins/get/${skinId}`)
-      .then((res) => res.json())
-      .then((json) => setSkin(json.data))
-      .catch((error) => {
-        console.error(error)
-        setError("No se pudo cargar la publicacion.")
-      })
-      .finally(() => setLoading(false))
-  }, [skinId])
 
   useEffect(() => {
     if (skin?.price != null) {
@@ -88,14 +68,14 @@ function Publicacion({
 
     try {
       if (isInCart) {
-        await eliminarItemCarrito(cartItem.id)
+        await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
         setCartMessage("Skin removida del carrito.")
       } else {
-        await agregarAlCarrito(skin.id)
+        await dispatch(agregarAlCarrito(skin.id)).unwrap()
         setCartMessage("Skin agregada al carrito.")
       }
 
-      await onCartChange?.({ resetCheckout: true })
+      dispatch(resetCheckout())
     } catch (error) {
       setError(error.message)
     } finally {
@@ -117,15 +97,14 @@ function Publicacion({
 
     setSavingOwner(true)
     try {
-      const updated = await editarPublicacion(skin.id, {
+      await dispatch(editarPublicacion({
+        skinId: skin.id,
         price,
         discount: skin.discount ?? 0,
         vendible: skin.vendible !== false,
         intercambiable: skin.intercambiable !== false,
-      })
-      setSkin(updated ?? { ...skin, price })
+      })).unwrap()
       setOwnerMessage("Precio actualizado.")
-      await onMyPublicationsChange?.()
     } catch (error) {
       setError(error.message)
     } finally {
@@ -143,10 +122,8 @@ function Publicacion({
 
     setDeactivating(true)
     try {
-      const message = await despublicarPublicacion(skin.id)
-      setSkin((current) => ({ ...current, active: false }))
-      setOwnerMessage(message || "Publicacion dada de baja.")
-      await onMyPublicationsChange?.()
+      const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
+      setOwnerMessage(result.message || "Publicacion dada de baja.")
     } catch (error) {
       setError(error.message)
     } finally {

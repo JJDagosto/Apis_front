@@ -1,35 +1,55 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import {
-  crearPreferenciaDesdeCarrito,
-  procesarPagoTarjetaPrueba,
-  sincronizarPagosPendientes,
-  sincronizarPagoOrden,
-} from "../api/payments"
-import { vaciarCarrito } from "../api/carrito"
+  clearCheckoutResult,
+  iniciarCheckout,
+  procesarPagoPrueba,
+  sincronizarPagoCheckout,
+} from "../Redux/checkoutSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Checkout.css"
 
+const getCheckoutUrl = (data) => {
+  if (!data) return ""
+
+  const isTestKey = data.publicKey?.startsWith("TEST-")
+  const preferSandbox = data.checkoutMode === "sandbox" || isTestKey
+  const serverCheckoutUrl = data.checkoutUrl || ""
+  const usableServerCheckoutUrl =
+    preferSandbox === serverCheckoutUrl.includes("sandbox.mercadopago")
+      ? serverCheckoutUrl
+      : ""
+
+  return (
+    usableServerCheckoutUrl ||
+    (preferSandbox ? data.sandboxInitPoint : data.initPoint) ||
+    data.initPoint ||
+    data.sandboxInitPoint ||
+    (data.preferenceId
+      ? `${preferSandbox ? "https://sandbox.mercadopago.com.ar" : "https://www.mercadopago.com.ar"}/checkout/v1/redirect?pref_id=${data.preferenceId}`
+      : "")
+  )
+}
+
 function Checkout({
-  currentUser,
   goToLogin,
   goToCatalogo,
   goToPerfil,
   goToMisPublicaciones,
   cupon,
-  checkoutSession,
-  onCheckoutSessionChange,
-  onCartChange,
 }) {
-  const [order, setOrder] = useState(null)
-  const [amount, setAmount] = useState(null)
-  const [mercadoPagoUrl, setMercadoPagoUrl] = useState("")
-  const [brickReady, setBrickReady] = useState(false) // ya tenemos publicKey y orden
-  const [loading, setLoading] = useState(true)
-  const [syncingPayment, setSyncingPayment] = useState(false)
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const {
+    data,
+    status,
+    syncing,
+    testProcessing,
+    result,
+    error: checkoutError,
+  } = useSelector((state) => state.checkout)
   const syncingRef = useRef(false)
-  const [testProcessing, setTestProcessing] = useState(false)
-  const [error, setError] = useState("")
-  const [resultado, setResultado] = useState(null) // { status, statusDetail }
+  const [localError, setLocalError] = useState("")
   const [testCardForm, setTestCardForm] = useState({
     cardNumber: "4509953566233704",
     expirationMonth: "11",
@@ -43,137 +63,49 @@ function Checkout({
     paymentMethodId: "visa",
   })
 
-  const hydrateCheckout = (data) => {
-    const monto = data.order?.totalFinal ?? data.order?.totalPrice
-    const isTestKey = data.publicKey?.startsWith("TEST-")
-    const preferSandbox = data.checkoutMode === "sandbox" || isTestKey
-    const serverCheckoutUrl = data.checkoutUrl || ""
-    const usableServerCheckoutUrl =
-      preferSandbox === serverCheckoutUrl.includes("sandbox.mercadopago")
-        ? serverCheckoutUrl
-        : ""
-    const checkoutUrl =
-      usableServerCheckoutUrl ||
-      (preferSandbox ? data.sandboxInitPoint : data.initPoint) ||
-      data.initPoint ||
-      data.sandboxInitPoint ||
-      (data.preferenceId
-        ? `${preferSandbox ? "https://sandbox.mercadopago.com.ar" : "https://www.mercadopago.com.ar"}/checkout/v1/redirect?pref_id=${data.preferenceId}`
-        : "")
+  const order = data?.order
+  const amount = order?.totalFinal ?? order?.totalPrice
+  const mercadoPagoUrl = getCheckoutUrl(data)
+  const brickReady = Boolean(data?.publicKey && order)
+  const loading = status === "loading"
+  const tradeUrlIssue = currentUser
+    ? getTradeUrlIssue(currentUser, "comprar")
+    : ""
+  const error = localError || checkoutError || (
+    tradeUrlIssue
+      ? `${tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.`
+      : ""
+  )
 
-    setOrder(data.order)
-    setAmount(monto)
-    setMercadoPagoUrl(checkoutUrl)
-    setBrickReady(true)
-  }
-
-  const completeApprovedPayment = async (statusDetail) => {
-    setResultado({ status: "approved", statusDetail })
-    onCheckoutSessionChange?.(null)
-    try { await vaciarCarrito() } catch { /* el pago ya fue aprobado; no bloqueamos la confirmacion */ }
-    await onCartChange?.({ resetCheckout: true })
-  }
-
-  // 1) Al entrar: creamos la orden desde el carrito y traemos publicKey + preferenceId.
   useEffect(() => {
-    if (!currentUser) {
-      setLoading(false)
-      return
-    }
+    if (!currentUser || tradeUrlIssue) return
 
-    const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
-    if (tradeUrlIssue) {
-      setError(`${tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.`)
-      setBrickReady(false)
-      setLoading(false)
-      return
-    }
+    dispatch(iniciarCheckout({
+      cupon,
+      email: currentUser.email,
+    }))
+  }, [cupon, currentUser, dispatch, tradeUrlIssue])
 
-    let cancelado = false
-
-    const init = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        const pendingSync = await sincronizarPagosPendientes()
-        const pendingApproved =
-          pendingSync.status === "approved" || pendingSync.order?.paymentStatus === "PAID"
-        if (pendingApproved) {
-          if (!cancelado) {
-            await completeApprovedPayment(pendingSync.statusDetail)
-          }
-          return
-        }
-
-        const reusableSession =
-          checkoutSession?.email === currentUser.email &&
-          checkoutSession?.cupon === (cupon || "") &&
-          checkoutSession?.data?.order?.id &&
-          checkoutSession?.data?.preferenceId &&
-          checkoutSession?.data?.publicKey &&
-          !(
-            checkoutSession.data.publicKey.startsWith("APP_USR-") &&
-            checkoutSession.data.checkoutUrl?.includes("sandbox.mercadopago")
-          )
-
-        if (reusableSession) {
-          if (!cancelado) hydrateCheckout(checkoutSession.data)
-          return
-        }
-
-        const data = await crearPreferenciaDesdeCarrito(cupon)
-        if (cancelado) return
-
-        hydrateCheckout(data)
-        onCheckoutSessionChange?.({ email: currentUser.email, cupon: cupon || "", data })
-      } catch (err) {
-        if (!cancelado) setError(err.message)
-      } finally {
-        if (!cancelado) setLoading(false)
-      }
-    }
-
-    init()
-    return () => {
-      cancelado = true
-    }
-  }, [currentUser, cupon, checkoutSession])
-
-  const updateTestCardForm = (field, value) => {
-    setTestCardForm((current) => ({ ...current, [field]: value }))
-  }
-
-  const syncPaymentStatus = async () => {
-    if (!order?.id || resultado || syncingRef.current) return
+  const syncPaymentStatus = useCallback(async () => {
+    if (!order?.id || result || syncingRef.current) return
     syncingRef.current = true
+    setLocalError("")
 
     try {
-      setSyncingPayment(true)
-      const resp = await sincronizarPagoOrden(order.id)
-      let approved = resp.status === "approved" || resp.order?.paymentStatus === "PAID"
-      let approvedResp = resp
-      if (!approved) {
-        const pendingResp = await sincronizarPagosPendientes()
-        approved = pendingResp.status === "approved" || pendingResp.order?.paymentStatus === "PAID"
-        approvedResp = pendingResp
-      }
-      if (approved) {
-        await completeApprovedPayment(approvedResp.statusDetail)
-      }
-    } catch (err) {
-      setError(err.message || "No se pudo verificar el pago todavia.")
+      await dispatch(sincronizarPagoCheckout()).unwrap()
+    } catch (syncError) {
+      setLocalError(
+        syncError.message || "No se pudo verificar el pago todavia.",
+      )
     } finally {
-      setSyncingPayment(false)
       syncingRef.current = false
     }
-  }
+  }, [dispatch, order?.id, result])
 
   useEffect(() => {
-    if (!order?.id || resultado) return
+    if (!order?.id || result) return
 
-    const handleFocus = () => {
-      syncPaymentStatus()
-    }
+    const handleFocus = () => syncPaymentStatus()
     const handleVisibility = () => {
       if (!document.hidden) syncPaymentStatus()
     }
@@ -187,30 +119,25 @@ function Checkout({
       document.removeEventListener("visibilitychange", handleVisibility)
       window.clearInterval(timer)
     }
-  }, [order?.id, resultado])
+  }, [order?.id, result, syncPaymentStatus])
+
+  const updateTestCardForm = (field, value) => {
+    setTestCardForm((current) => ({ ...current, [field]: value }))
+  }
 
   const handleTestCardPayment = async (event) => {
     event.preventDefault()
-    setError("")
-    setTestProcessing(true)
+    setLocalError("")
 
     try {
-      const resp = await procesarPagoTarjetaPrueba(order.id, {
+      await dispatch(procesarPagoPrueba({
         ...testCardForm,
         expirationMonth: Number(testCardForm.expirationMonth),
         expirationYear: Number(testCardForm.expirationYear),
         installments: Number(testCardForm.installments) || 1,
-      })
-
-      if (resp.status === "approved") {
-        await completeApprovedPayment(resp.statusDetail)
-      } else {
-        setResultado({ status: resp.status, statusDetail: resp.statusDetail })
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setTestProcessing(false)
+      })).unwrap()
+    } catch (paymentError) {
+      setLocalError(paymentError.message)
     }
   }
 
@@ -226,11 +153,10 @@ function Checkout({
     )
   }
 
-  // Pantalla de resultado segun el estado que devuelve Mercado Pago.
-  if (resultado) {
-    const aprobado = resultado.status === "approved"
+  if (result) {
+    const aprobado = result.status === "approved"
     const pendiente =
-      resultado.status === "in_process" || resultado.status === "pending"
+      result.status === "in_process" || result.status === "pending"
 
     return (
       <main className="checkout-page">
@@ -263,8 +189,8 @@ function Checkout({
           {!aprobado && !pendiente && (
             <>
               <h1 className="checkout-fail">Pago rechazado</h1>
-              <p>No se pudo procesar el pago ({resultado.statusDetail || resultado.status}).</p>
-              <button type="button" onClick={() => setResultado(null)}>
+              <p>No se pudo procesar el pago ({result.statusDetail || result.status}).</p>
+              <button type="button" onClick={() => dispatch(clearCheckoutResult())}>
                 Reintentar
               </button>
               <button type="button" className="checkout-secondary" onClick={goToCatalogo}>
@@ -284,7 +210,7 @@ function Checkout({
 
         {loading && <p className="checkout-message">Preparando el pago...</p>}
         {error && <p className="checkout-error">{error}</p>}
-        {error?.includes("Steam Trade URL") && (
+        {tradeUrlIssue && (
           <button type="button" className="checkout-secondary" onClick={goToPerfil}>
             Completar perfil
           </button>
@@ -314,9 +240,9 @@ function Checkout({
                   type="button"
                   className="checkout-secondary"
                   onClick={syncPaymentStatus}
-                  disabled={syncingPayment}
+                  disabled={syncing}
                 >
-                  {syncingPayment ? "Verificando pago..." : "Ya pague, verificar pago"}
+                  {syncing ? "Verificando pago..." : "Ya pague, verificar pago"}
                 </button>
               </>
             ) : (

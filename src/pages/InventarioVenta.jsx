@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react"
 import { FaPen, FaSyncAlt, FaTag, FaTimes } from "react-icons/fa"
-import { getInventario, publicarInventarioItem, syncInventario } from "../api/inventario"
+import { useDispatch, useSelector } from "react-redux"
+import {
+  fetchInventario,
+  publicarInventarioItem,
+  sincronizarInventario,
+} from "../Redux/inventarioSlice"
 import { getSellingSetupIssues } from "../utils/tradeProfile"
 import "./InventarioVenta.css"
 
@@ -10,11 +15,18 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, myPublications = [], onMyPublicationsChange }) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [publishing, setPublishing] = useState(false)
+function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const myPublications = useSelector((state) => state.publicaciones.items)
+  const {
+    items,
+    status,
+    syncing,
+    publishing,
+    error: reduxError,
+  } = useSelector((state) => state.inventario)
+  const loading = status === "loading"
   const [selectedItem, setSelectedItem] = useState(null)
   const [price, setPrice] = useState("")
   const [vendible, setVendible] = useState(true)
@@ -22,25 +34,11 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  const loadInventory = async () => {
-    setError("")
-    setLoading(true)
-
-    try {
-      const inventario = await getInventario()
-      setItems(inventario)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
     if (currentUser) {
-      loadInventory()
+      dispatch(fetchInventario())
     }
-  }, [currentUser])
+  }, [currentUser, dispatch])
 
   if (!currentUser) {
     return (
@@ -61,16 +59,12 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
   const handleSync = async () => {
     setError("")
     setSuccess("")
-    setSyncing(true)
 
     try {
-      const message = await syncInventario()
-      setSuccess(message)
-      await loadInventory()
+      const result = await dispatch(sincronizarInventario()).unwrap()
+      setSuccess(result.message)
     } catch (error) {
       setError(error.message)
-    } finally {
-      setSyncing(false)
     }
   }
 
@@ -115,18 +109,18 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
       return
     }
 
-    setPublishing(true)
-
     try {
-      await publicarInventarioItem(selectedItem.id, { price: parsedPrice, vendible, intercambiable })
-      setSuccess("Publicacion creada correctamente.")
-      await onMyPublicationsChange?.()
-      closePublishModal()
-      await loadInventory()
+      const result = await dispatch(publicarInventarioItem({
+        itemId: selectedItem.id,
+        price: parsedPrice,
+        vendible,
+        intercambiable,
+      })).unwrap()
+      setSuccess(result.message || "Publicacion creada correctamente.")
+      setSelectedItem(null)
+      setPrice("")
     } catch (error) {
       setError(error.message)
-    } finally {
-      setPublishing(false)
     }
   }
 
@@ -200,7 +194,9 @@ function InventarioVenta({ currentUser, goToLogin, goToPerfil, openPublicacion, 
         </section>
       )}
 
-      {error && <p className="inventory-error">{error}</p>}
+      {(error || reduxError) && (
+        <p className="inventory-error">{error || reduxError}</p>
+      )}
       {success && <p className="inventory-success">{success}</p>}
 
       {loading && <p className="inventory-message">Cargando inventario...</p>}

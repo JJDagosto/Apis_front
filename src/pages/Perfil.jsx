@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { updateCurrentUser } from "../api/auth"
+import { useDispatch, useSelector } from "react-redux"
+import { updateCurrentUser } from "../Redux/authSlice"
 import { isValidSteamTradeUrl } from "../utils/tradeProfile"
 import "./Perfil.css"
 
@@ -14,7 +15,9 @@ const emptyProfile = {
   password: "",
 }
 
-function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
+function Perfil({ goToLogin }) {
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
   const [form, setForm] = useState(emptyProfile)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState("")
@@ -86,8 +89,7 @@ function Perfil({ currentUser, onProfileUpdated, goToLogin }) {
         payload.password = form.password
       }
 
-      const updatedUser = await updateCurrentUser(payload)
-      onProfileUpdated(updatedUser)
+      await dispatch(updateCurrentUser(payload)).unwrap()
       setForm((currentForm) => ({ ...currentForm, password: "" }))
       setSuccess("Perfil actualizado correctamente.")
     } catch (error) {

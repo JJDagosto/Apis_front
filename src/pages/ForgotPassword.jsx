@@ -1,8 +1,10 @@
 import { useState } from "react"
-import { forgotPassword } from "../api/auth"
+import { useDispatch } from "react-redux"
+import { requestPasswordReset } from "../Redux/authSlice"
 import "./Login.css"
 
 function ForgotPassword({ goToLogin }) {
+  const dispatch = useDispatch()
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -16,7 +18,7 @@ function ForgotPassword({ goToLogin }) {
 
     try {
       // El back responde el mismo mensaje exista o no el email (por privacidad).
-      const msg = await forgotPassword(email)
+      const msg = await dispatch(requestPasswordReset(email)).unwrap()
       setMessage(msg || "Si el email esta registrado, te enviamos un link para cambiar la contraseña.")
     } catch (err) {
       setError(err.message)

@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { register } from "../api/auth"
+import { useDispatch } from "react-redux"
+import { registerUser } from "../Redux/authSlice"
 import "./Register.css"
 
 const isValidEmail = (email) => {
@@ -15,6 +16,7 @@ const getPasswordError = (password, passwordRepeat) => {
 }
 
 function Register({ goToLogin }) {
+  const dispatch = useDispatch()
   const [form, setForm] = useState({
     username: "",
     firstName: "",
@@ -53,14 +55,14 @@ function Register({ goToLogin }) {
     setLoading(true)
 
     try {
-      const msg = await register({
+      const msg = await dispatch(registerUser({
         username: form.username.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         password: form.password,
         passwordRepeat: form.passwordRepeat,
-      })
+      })).unwrap()
       setMessage(msg || "Cuenta creada. Verifica tu email antes de iniciar sesion.")
     } catch (error) {
       setError(error.message)

@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react"
 import { FaChevronLeft, FaChevronRight, FaPlus, FaSearch, FaTicketAlt, FaTrash } from "react-icons/fa"
+import { useDispatch, useSelector } from "react-redux"
 import {
-  buscarCatalogo,
+  buscarCatalogoAdmin,
   crearCuponAdmin,
   crearSkinAdminParaUsuario,
   eliminarCuponAdmin,
-  getCuponesAdmin,
-  getOrdenesAdmin,
-  getPublicacionesVisibles,
-  getUsuariosAdmin,
+  fetchAdminDashboard,
   inactivarSkinAdmin,
-} from "../api/adminDev"
+} from "../Redux/adminSlice"
 import "./AdminDevTools.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -38,14 +36,21 @@ const getExteriorSortValue = (item) => {
   return index === -1 ? exteriorOrder.length : index
 }
 
-function AdminDevTools({ currentUser, goToCatalogo }) {
-  const [publicaciones, setPublicaciones] = useState([])
-  const [cupones, setCupones] = useState([])
-  const [usuarios, setUsuarios] = useState([])
-  const [ordenes, setOrdenes] = useState([])
+function AdminDevTools({ goToCatalogo }) {
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const {
+    publicaciones,
+    cupones,
+    usuarios,
+    ordenes,
+    catalogResults,
+    status,
+    searching,
+    error: reduxError,
+  } = useSelector((state) => state.admin)
   const [skinSearch, setSkinSearch] = useState("")
   const [catalogSearch, setCatalogSearch] = useState("ak-47")
-  const [catalogResults, setCatalogResults] = useState([])
   const [selectedCatalog, setSelectedCatalog] = useState(null)
   const [price, setPrice] = useState("1000")
   const [sellerSearch, setSellerSearch] = useState("")
@@ -55,42 +60,19 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     fechaExpiracion: "",
     multiUso: true,
   })
-  const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState(null)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [publicacionesPage, setPublicacionesPage] = useState(1)
 
   const isAdmin = currentUser?.role === "ADMIN"
-
-  const loadAdminData = async () => {
-    setError("")
-    setLoading(true)
-    try {
-      const [publicacionesData, cuponesData, usuariosData, ordenesData] = await Promise.all([
-        getPublicacionesVisibles(),
-        getCuponesAdmin(),
-        getUsuariosAdmin(),
-        getOrdenesAdmin(),
-      ])
-      setPublicaciones(publicacionesData)
-      setCupones(cuponesData)
-      setUsuarios(usuariosData)
-      setOrdenes(ordenesData)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = status === "loading"
 
   useEffect(() => {
     if (isAdmin) {
-      loadAdminData()
-    } else {
-      setLoading(false)
+      dispatch(fetchAdminDashboard())
     }
-  }, [isAdmin])
+  }, [dispatch, isAdmin])
 
   const skinsFiltradas = useMemo(() => {
     const term = skinSearch.trim().toLowerCase()
@@ -183,15 +165,13 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
       return
     }
 
-    setActionId("catalog-search")
     try {
-      const data = await buscarCatalogo(catalogSearch.trim())
-      setCatalogResults(data)
+      const data = await dispatch(
+        buscarCatalogoAdmin(catalogSearch.trim()),
+      ).unwrap()
       if (data.length === 0) setMessage("No encontramos skins con ese nombre.")
     } catch (err) {
       setError(err.message)
-    } finally {
-      setActionId(null)
     }
   }
 
@@ -217,14 +197,16 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
     setActionId("create-skin")
     try {
-      await crearSkinAdminParaUsuario(seller.email, {
-        catalogoId: selectedCatalog.id,
-        price: parsedPrice,
-        discount: 0,
-        stock: 1,
-      })
+      await dispatch(crearSkinAdminParaUsuario({
+        vendedorEmail: seller.email,
+        payload: {
+          catalogoId: selectedCatalog.id,
+          price: parsedPrice,
+          discount: 0,
+          stock: 1,
+        },
+      })).unwrap()
       setMessage(`Publicacion admin creada para ${seller.email}.`)
-      await loadAdminData()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -242,9 +224,8 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setMessage("")
     setActionId(`skin-${skin.id}`)
     try {
-      const msg = await inactivarSkinAdmin(skin.id)
-      setMessage(msg || "Publicacion eliminada.")
-      await loadAdminData()
+      const result = await dispatch(inactivarSkinAdmin(skin.id)).unwrap()
+      setMessage(result.message || "Publicacion eliminada.")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -269,10 +250,9 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
 
     setActionId("create-coupon")
     try {
-      await crearCuponAdmin(couponForm)
+      await dispatch(crearCuponAdmin(couponForm)).unwrap()
       setCouponForm({ codigo: "", descuentoPct: "10", fechaExpiracion: "", multiUso: true })
       setMessage("Cupon creado.")
-      await loadAdminData()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -288,9 +268,8 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
     setMessage("")
     setActionId(`coupon-${cupon.id}`)
     try {
-      const msg = await eliminarCuponAdmin(cupon.id)
-      setMessage(msg || "Cupon eliminado.")
-      await loadAdminData()
+      const result = await dispatch(eliminarCuponAdmin(cupon.id)).unwrap()
+      setMessage(result.message || "Cupon eliminado.")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -328,7 +307,9 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
           <div><span>Usuarios</span><strong>{stats.usuarios}</strong></div>
         </div>
 
-        {error && <p className="admin-dev-error">{error}</p>}
+        {(error || reduxError) && (
+          <p className="admin-dev-error">{error || reduxError}</p>
+        )}
         {message && <p className="admin-dev-success">{message}</p>}
         {loading && <p className="admin-dev-message">Cargando datos admin...</p>}
 
@@ -488,7 +469,7 @@ function AdminDevTools({ currentUser, goToCatalogo }) {
                   onChange={(event) => setCatalogSearch(event.target.value)}
                   placeholder="AK-47, Karambit..."
                 />
-                <button type="submit" disabled={actionId === "catalog-search"}>
+                <button type="submit" disabled={searching}>
                   <FaSearch /> Buscar
                 </button>
               </form>

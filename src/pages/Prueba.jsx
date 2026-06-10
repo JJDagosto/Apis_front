@@ -1,16 +1,8 @@
 import Card from '../components/Card.jsx'
-import { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
 
 function Prueba() {
-  const [skins, setSkins] = useState([])
-
-  useEffect(() => {
-    const URL = 'http://localhost:4003'
-    fetch(`${URL}/skins/get/all`)
-      .then((response) => response.json())
-      .then((data) => { setSkins(data.data) })
-      .catch(() => { console.error('error') })
-  }, [])
+  const skins = useSelector((state) => state.catalogo.items)
 
   return (
     <>

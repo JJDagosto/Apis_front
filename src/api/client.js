@@ -1,18 +1,15 @@
 const API_URL = "http://localhost:4003"
-const TOKEN_KEY = "skinsmarket_token"
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY)
+let tokenResolver = () => null
 
-export const saveToken = (token) => {
-  localStorage.setItem(TOKEN_KEY, token)
+export const configureTokenResolver = (resolver) => {
+  tokenResolver = resolver
 }
 
-export const clearToken = () => {
-  localStorage.removeItem(TOKEN_KEY)
-}
+export const getToken = () => tokenResolver()
 
-export const apiRequest = async (path, options = {}) => {
-  const token = getToken()
+export const apiRequest = async (path, options = {}, tokenOverride) => {
+  const token = tokenOverride ?? getToken()
   const headers = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),
     ...options.headers,

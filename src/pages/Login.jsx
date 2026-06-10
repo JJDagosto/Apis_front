@@ -1,11 +1,13 @@
 import { useState } from "react"
-import { login, resendVerification } from "../api/auth"
+import { useDispatch, useSelector } from "react-redux"
+import { loginUser, resendVerificationEmail } from "../Redux/authSlice"
 import "./Login.css"
 
-function Login({ onLoginSuccess, goToRegister, goToForgot }) {
+function Login({ goToCatalogo, goToRegister, goToForgot }) {
+  const dispatch = useDispatch()
+  const loading = useSelector((state) => state.auth.loading)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
 
@@ -13,15 +15,12 @@ function Login({ onLoginSuccess, goToRegister, goToForgot }) {
     event.preventDefault()
     setError("")
     setMessage("")
-    setLoading(true)
 
     try {
-      await login({ email, password })
-      await onLoginSuccess()
+      await dispatch(loginUser({ email, password })).unwrap()
+      goToCatalogo()
     } catch (error) {
       setError(error.message)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -33,14 +32,11 @@ function Login({ onLoginSuccess, goToRegister, goToForgot }) {
       return
     }
 
-    setLoading(true)
     try {
-      const msg = await resendVerification(email.trim())
+      const msg = await dispatch(resendVerificationEmail(email.trim())).unwrap()
       setMessage(msg || "Si tu cuenta esta pendiente, reenviamos el link.")
     } catch (error) {
       setError(error.message)
-    } finally {
-      setLoading(false)
     }
   }
 

@@ -1,9 +1,9 @@
 import './App.css'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 import NavBar from './components/NavBar'
 
-import { getCurrentUser, logout } from './api/auth'
 import Home from './pages/Home'
 import Catalogo from './pages/Catalogo'
 import Prueba from './pages/Prueba'
@@ -21,259 +21,177 @@ import Checkout from './pages/Checkout'
 import ComoFunciona from './pages/ComoFunciona'
 import Soporte from './pages/Soporte'
 import AdminDevTools from './pages/AdminDevTools'
-import { getCarrito } from './api/carrito'
-import { getMisPublicaciones } from './api/skins'
+import {
+  clearSearch,
+  goToCheckout,
+  openPublicacion,
+  openResetPassword,
+  openVerifyEmail,
+  resetAppSession,
+  searchCatalogo,
+  setCurrentPage,
+} from './Redux/appSlice'
+import { logout } from './Redux/authSlice'
+import { fetchCarrito } from './Redux/carritoSlice'
+import { fetchCatalogo } from './Redux/catalogoSlice'
+import { fetchMisPublicaciones } from './Redux/publicacionesSlice'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('home')
-  const [selectedSkinId, setSelectedSkinId] = useState(null)
-  const [currentUser, setCurrentUser] = useState(null)
-  const [checkingSession, setCheckingSession] = useState(true)
-  const [resetToken, setResetToken] = useState(null)
-  const [verifyToken, setVerifyToken] = useState(null)
-  const [checkoutCupon, setCheckoutCupon] = useState('')
-  const [checkoutSession, setCheckoutSession] = useState(null)
-  const [cartItems, setCartItems] = useState([])
-  const [myPublications, setMyPublications] = useState([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const dispatch = useDispatch()
+  const {
+    currentPage,
+    selectedSkinId,
+    resetToken,
+    verifyToken,
+    checkoutCupon,
+    searchTerm,
+  } = useSelector((state) => state.app)
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const carrito = useSelector((state) => state.carrito.data)
+  const cartItems = carrito?.items ?? []
 
-  const cartCount = cartItems.length
-
-  const loadCurrentUser = async () => {
-    const user = await getCurrentUser()
-    setCurrentUser(user)
-    setCurrentPage('catalogo')
-  }
-
-  const refreshCart = async ({ resetCheckout = false } = {}) => {
-    if (resetCheckout) {
-      setCheckoutSession(null)
-    }
-
-    if (!currentUser) {
-      setCartItems([])
-      return
-    }
-
-    try {
-      const carrito = await getCarrito()
-      setCartItems(carrito?.items ?? [])
-    } catch {
-      setCartItems([])
-    }
-  }
-
-  const refreshMyPublications = async () => {
-    if (!currentUser) {
-      setMyPublications([])
-      return
-    }
-
-    try {
-      const publicaciones = await getMisPublicaciones()
-      setMyPublications(publicaciones ?? [])
-    } catch {
-      setMyPublications([])
-    }
-  }
+  const navigate = (page) => dispatch(setCurrentPage(page))
 
   useEffect(() => {
-    getCurrentUser()
-      .then((user) => setCurrentUser(user))
-      .catch(() => logout())
-      .finally(() => setCheckingSession(false))
-  }, [])
+    dispatch(fetchCatalogo())
+  }, [dispatch])
 
   useEffect(() => {
     const path = window.location.pathname
     const token = new URLSearchParams(window.location.search).get('token')
 
     if (path.includes('reset-password') && token) {
-      setResetToken(token)
-      setCurrentPage('resetPassword')
+      dispatch(openResetPassword(token))
       window.history.replaceState({}, '', '/')
       return
     }
 
     if (path.includes('verify-email') && token) {
-      setVerifyToken(token)
-      setCurrentPage('verifyEmail')
+      dispatch(openVerifyEmail(token))
       window.history.replaceState({}, '', '/')
     }
-  }, [])
+  }, [dispatch])
 
   useEffect(() => {
-    if (checkingSession) return
+    if (!currentUser) return
 
-    if (currentUser) {
-      refreshCart()
-      refreshMyPublications()
-    } else {
-      setCartItems([])
-      setMyPublications([])
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, currentPage, checkingSession])
-
-  const handleSearch = (term) => {
-    setSearchTerm(term || '')
-    setCurrentPage('catalogo')
-  }
-
-  const openPublicacion = (skinId) => {
-    setSelectedSkinId(skinId)
-    setCurrentPage('publicacion')
-  }
-
-  const goToCheckout = (cupon) => {
-    setCheckoutCupon(cupon || '')
-    setCurrentPage('checkout')
-  }
+    dispatch(fetchCarrito())
+    dispatch(fetchMisPublicaciones())
+  }, [currentUser, dispatch])
 
   const handleLogout = () => {
-    logout()
-    setCurrentUser(null)
-    setCartItems([])
-    setMyPublications([])
-    setCheckoutSession(null)
-    setCurrentPage('home')
+    dispatch(logout())
+    dispatch(resetAppSession())
   }
 
-return (
+  return (
     <>
       <NavBar
-        setCurrentPage={setCurrentPage}
+        setCurrentPage={navigate}
         currentUser={currentUser}
         onLogout={handleLogout}
-        cartCount={cartCount}
-        onSearch={handleSearch}
+        cartCount={cartItems.length}
+        onSearch={(term) => dispatch(searchCatalogo(term))}
       />
 
       {currentPage === 'home' && (
         <Home
           currentUser={currentUser}
-          goToCatalogo={() => setCurrentPage('catalogo')}
-          goToSell={() => setCurrentPage(currentUser ? 'inventarioVenta' : 'login')}
-          goToInfo={() => setCurrentPage('comoFunciona')}
+          goToCatalogo={() => navigate('catalogo')}
+          goToSell={() => navigate(currentUser ? 'inventarioVenta' : 'login')}
+          goToInfo={() => navigate('comoFunciona')}
         />
       )}
 
       {currentPage === 'catalogo' && (
         <Catalogo
-          openPublicacion={openPublicacion}
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          goToPerfil={() => setCurrentPage('perfil')}
-          onCartChange={refreshCart}
-          cartItems={cartItems}
-          myPublications={myPublications}
+          openPublicacion={(skinId) => dispatch(openPublicacion(skinId))}
+          goToLogin={() => navigate('login')}
+          goToPerfil={() => navigate('perfil')}
           searchTerm={searchTerm}
-          onClearSearch={() => setSearchTerm('')}
+          onClearSearch={() => dispatch(clearSearch())}
         />
       )}
 
       {currentPage === 'publicacion' && (
         <Publicacion
           skinId={selectedSkinId}
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          goToPerfil={() => setCurrentPage('perfil')}
-          goToCarrito={() => setCurrentPage('carrito')}
-          volverAlCatalogo={() => setCurrentPage('catalogo')}
-          onCartChange={refreshCart}
-          cartItems={cartItems}
-          myPublications={myPublications}
-          onMyPublicationsChange={refreshMyPublications}
+          goToLogin={() => navigate('login')}
+          goToPerfil={() => navigate('perfil')}
+          goToCarrito={() => navigate('carrito')}
+          volverAlCatalogo={() => navigate('catalogo')}
         />
       )}
 
       {currentPage === 'carrito' && (
         <Carrito
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          goToCatalogo={() => setCurrentPage('catalogo')}
-          goToPerfil={() => setCurrentPage('perfil')}
-          goToCheckout={goToCheckout}
-          onCartChange={refreshCart}
+          goToLogin={() => navigate('login')}
+          goToCatalogo={() => navigate('catalogo')}
+          goToPerfil={() => navigate('perfil')}
+          goToCheckout={(cupon) => dispatch(goToCheckout(cupon))}
         />
       )}
 
       {currentPage === 'checkout' && (
         <Checkout
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          goToCatalogo={() => setCurrentPage('catalogo')}
-          goToPerfil={() => setCurrentPage('perfil')}
-          goToMisPublicaciones={() => setCurrentPage('misPublicaciones')}
+          goToLogin={() => navigate('login')}
+          goToCatalogo={() => navigate('catalogo')}
+          goToPerfil={() => navigate('perfil')}
+          goToMisPublicaciones={() => navigate('misPublicaciones')}
           cupon={checkoutCupon}
-          checkoutSession={checkoutSession}
-          onCheckoutSessionChange={setCheckoutSession}
-          onCartChange={refreshCart}
         />
       )}
 
       {currentPage === 'login' && (
         <Login
-          onLoginSuccess={loadCurrentUser}
-          goToRegister={() => setCurrentPage('register')}
-          goToForgot={() => setCurrentPage('olvidarContrasena')}
+          goToCatalogo={() => navigate('catalogo')}
+          goToRegister={() => navigate('register')}
+          goToForgot={() => navigate('olvidarContrasena')}
         />
       )}
 
       {currentPage === 'register' && (
-        <Register goToLogin={() => setCurrentPage('login')} />
+        <Register goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'olvidarContrasena' && (
-        <ForgotPassword goToLogin={() => setCurrentPage('login')} />
+        <ForgotPassword goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'resetPassword' && (
-        <ResetPassword token={resetToken} goToLogin={() => setCurrentPage('login')} />
+        <ResetPassword token={resetToken} goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'verifyEmail' && (
-        <VerifyEmail token={verifyToken} goToLogin={() => setCurrentPage('login')} />
+        <VerifyEmail token={verifyToken} goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'perfil' && (
-        <Perfil
-          currentUser={currentUser}
-          onProfileUpdated={setCurrentUser}
-          goToLogin={() => setCurrentPage('login')}
-        />
+        <Perfil goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'inventarioVenta' && (
         <InventarioVenta
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          goToPerfil={() => setCurrentPage('perfil')}
-          openPublicacion={openPublicacion}
-          myPublications={myPublications}
-          onMyPublicationsChange={refreshMyPublications}
+          goToLogin={() => navigate('login')}
+          goToPerfil={() => navigate('perfil')}
+          openPublicacion={(skinId) => dispatch(openPublicacion(skinId))}
         />
       )}
 
       {currentPage === 'misPublicaciones' && (
-        <MisPublicaciones
-          currentUser={currentUser}
-          goToLogin={() => setCurrentPage('login')}
-          onPublicationsChange={refreshMyPublications}
-        />
+        <MisPublicaciones goToLogin={() => navigate('login')} />
       )}
 
       {currentPage === 'adminDevTools' && (
         <AdminDevTools
-          currentUser={currentUser}
-          goToCatalogo={() => setCurrentPage('catalogo')}
+          goToCatalogo={() => navigate('catalogo')}
         />
       )}
 
       {currentPage === 'comoFunciona' && <ComoFunciona />}
 
       {currentPage === 'soporte' && (
-        <Soporte goToForgot={() => setCurrentPage('olvidarContrasena')} />
+        <Soporte goToForgot={() => navigate('olvidarContrasena')} />
       )}
 
       {currentPage === 'prueba' && <Prueba />}

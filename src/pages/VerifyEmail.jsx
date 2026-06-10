@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
-import { verifyEmail } from "../api/auth"
+import { useDispatch } from "react-redux"
+import { verifyUserEmail } from "../Redux/authSlice"
 import "./Login.css"
 
 function VerifyEmail({ token, goToLogin }) {
+  const dispatch = useDispatch()
   const [status, setStatus] = useState("checking")
   const [message, setMessage] = useState("Verificando email...")
 
@@ -17,7 +19,7 @@ function VerifyEmail({ token, goToLogin }) {
 
     const verify = async () => {
       try {
-        const msg = await verifyEmail(token)
+        const msg = await dispatch(verifyUserEmail(token)).unwrap()
         if (cancelled) return
         setStatus("ok")
         setMessage(msg || "Email verificado. Ya podes iniciar sesion.")
@@ -32,7 +34,7 @@ function VerifyEmail({ token, goToLogin }) {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [dispatch, token])
 
   return (
     <main className="login-page">

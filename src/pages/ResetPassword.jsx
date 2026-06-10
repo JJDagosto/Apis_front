@@ -1,8 +1,10 @@
 import { useState } from "react"
-import { resetPassword } from "../api/auth"
+import { useDispatch } from "react-redux"
+import { resetUserPassword } from "../Redux/authSlice"
 import "./Login.css"
 
 function ResetPassword({ token, goToLogin }) {
+  const dispatch = useDispatch()
   const [password, setPassword] = useState("")
   const [passwordRepeat, setPasswordRepeat] = useState("")
   const [loading, setLoading] = useState(false)
@@ -42,7 +44,7 @@ function ResetPassword({ token, goToLogin }) {
 
     setLoading(true)
     try {
-      await resetPassword({ token, password, passwordRepeat })
+      await dispatch(resetUserPassword({ token, password, passwordRepeat })).unwrap()
       setDone(true)
     } catch (err) {
       setError(err.message)

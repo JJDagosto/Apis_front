@@ -1,10 +1,8 @@
-﻿import { useEffect, useState } from "react"
+﻿import { useState } from "react"
 import { FaTrash, FaShoppingCart } from "react-icons/fa"
-import {
-  eliminarItemCarrito,
-  getCarrito,
-  vaciarCarrito,
-} from "../api/carrito"
+import { useDispatch, useSelector } from "react-redux"
+import { eliminarItemCarrito, vaciarCarrito } from "../Redux/carritoSlice"
+import { resetCheckout } from "../Redux/checkoutSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Carrito.css"
 
@@ -14,32 +12,15 @@ const limpiarNombreSkin = (nombre = "") => {
     .replace(/\s*\([^)]*\)$/, "")
 }
 
-function Carrito({ currentUser, goToLogin, goToCatalogo, goToPerfil, goToCheckout, onCartChange }) {
-  const [carrito, setCarrito] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
+function Carrito({ goToLogin, goToCatalogo, goToPerfil, goToCheckout }) {
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const { data: carrito, loading, updating, error: cartError } = useSelector(
+    (state) => state.carrito,
+  )
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [cupon, setCupon] = useState("")
-
-  const loadCart = async () => {
-    setError("")
-    setLoading(true)
-
-    try {
-      const data = await getCarrito()
-      setCarrito(data)
-      await onCartChange?.({ resetCheckout: true })
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (currentUser) loadCart()
-  }, [currentUser])
 
   if (!currentUser) {
     return (
@@ -56,37 +37,30 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToPerfil, goToCheckou
   const items = carrito?.items ?? []
   const total = items.reduce((sum, item) => sum + item.precioUnitario, 0)
   const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
+  const displayError = error || cartError
 
   const handleRemove = async (itemId) => {
-    setUpdating(true)
     setError("")
     setSuccess("")
 
     try {
-      const updated = await eliminarItemCarrito(itemId)
-      setCarrito(updated)
-      await onCartChange?.({ resetCheckout: true })
+      await dispatch(eliminarItemCarrito(itemId)).unwrap()
+      dispatch(resetCheckout())
     } catch (error) {
       setError(error.message)
-    } finally {
-      setUpdating(false)
     }
   }
 
   const handleClear = async () => {
-    setUpdating(true)
     setError("")
     setSuccess("")
 
     try {
-      const updated = await vaciarCarrito()
-      setCarrito(updated)
-      await onCartChange?.()
+      await dispatch(vaciarCarrito()).unwrap()
+      dispatch(resetCheckout())
       setSuccess("Carrito vaciado.")
     } catch (error) {
       setError(error.message)
-    } finally {
-      setUpdating(false)
     }
   }
 
@@ -117,7 +91,7 @@ function Carrito({ currentUser, goToLogin, goToCatalogo, goToPerfil, goToCheckou
       </section>
 
       {loading && <p className="cart-message">Cargando carrito...</p>}
-      {error && <p className="cart-error">{error}</p>}
+      {displayError && <p className="cart-error">{displayError}</p>}
       {success && <p className="cart-success">{success}</p>}
 
       {!loading && items.length === 0 && (

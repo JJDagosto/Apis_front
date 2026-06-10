@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react"
 import { FaPen, FaPause, FaPlay, FaTimes } from "react-icons/fa"
-import { sincronizarPagosPendientes } from "../api/payments"
+import { useDispatch, useSelector } from "react-redux"
 import {
   activarPublicacion,
   despublicarPublicacion,
   editarPublicacion,
-  getHistorialPublicaciones,
-  getMisCompras,
-  getMisPublicaciones,
-} from "../api/skins"
+  fetchDetallePublicaciones,
+  fetchMisPublicaciones,
+} from "../Redux/publicacionesSlice"
 import "./MisPublicaciones.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -47,11 +46,18 @@ function EstadoBadge({ estado }) {
   )
 }
 
-function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
-  const [publicaciones, setPublicaciones] = useState([])
-  const [historial, setHistorial] = useState([])
-  const [compras, setCompras] = useState([])
-  const [loading, setLoading] = useState(true)
+function MisPublicaciones({ goToLogin }) {
+  const dispatch = useDispatch()
+  const currentUser = useSelector((state) => state.auth.currentUser)
+  const {
+    items: publicaciones,
+    historial,
+    compras,
+    status,
+    detailStatus,
+    error: reduxError,
+  } = useSelector((state) => state.publicaciones)
+  const loading = status === "loading" || detailStatus === "loading"
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [actionId, setActionId] = useState(null)
@@ -61,36 +67,12 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
   const [editIntercambiable, setEditIntercambiable] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const loadData = async () => {
-    setError("")
-    setLoading(true)
-    try {
-      // Sincronizamos pagos pendientes primero: si el usuario compró
-      // y el webhook no llegó, esto marca la orden como PAID en la BD
-      // para que el scheduler pueda procesarla.
-      try { await sincronizarPagosPendientes() } catch { /* no crítico */ }
-
-      const [publicacionesData, historialData, comprasData] = await Promise.all([
-        getMisPublicaciones(),
-        getHistorialPublicaciones(),
-        getMisCompras(),
-      ])
-      setPublicaciones(publicacionesData)
-      setHistorial(historialData)
-      setCompras(comprasData)
-      await onPublicationsChange?.()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
     if (currentUser) {
-      loadData()
+      dispatch(fetchMisPublicaciones())
+      dispatch(fetchDetallePublicaciones())
     }
-  }, [currentUser])
+  }, [currentUser, dispatch])
 
   if (!currentUser) {
     return (
@@ -112,9 +94,8 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     setSuccess("")
     setActionId(skin.id)
     try {
-      const msg = await despublicarPublicacion(skin.id)
-      setSuccess(msg || "Publicacion dada de baja.")
-      await loadData()
+      const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
+      setSuccess(result.message || "Publicacion dada de baja.")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -127,9 +108,8 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
     setSuccess("")
     setActionId(skin.id)
     try {
-      const msg = await activarPublicacion(skin.id)
-      setSuccess(msg || "Publicacion reactivada.")
-      await loadData()
+      const result = await dispatch(activarPublicacion(skin.id)).unwrap()
+      setSuccess(result.message || "Publicacion reactivada.")
     } catch (err) {
       setError(err.message)
     } finally {
@@ -168,15 +148,15 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
 
     setSaving(true)
     try {
-      await editarPublicacion(editItem.id, {
+      await dispatch(editarPublicacion({
+        skinId: editItem.id,
         price,
         discount: editItem.discount ?? 0,
         vendible: editVendible,
         intercambiable: editIntercambiable,
-      })
+      })).unwrap()
       setSuccess("Publicacion actualizada.")
       setEditItem(null)
-      await loadData()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -281,7 +261,7 @@ function MisPublicaciones({ currentUser, goToLogin, onPublicationsChange }) {
         <p>Gestiona precio y estado de las skins que pusiste a la venta.</p>
       </header>
 
-      {error && <p className="pub-error">{error}</p>}
+      {(error || reduxError) && <p className="pub-error">{error || reduxError}</p>}
       {success && <p className="pub-success">{success}</p>}
       {loading && <p className="pub-message">Cargando publicaciones...</p>}
 
