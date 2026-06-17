@@ -6,6 +6,7 @@ import {
   publicarInventarioItem,
   sincronizarInventario,
 } from "../Redux/inventarioSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { getSellingSetupIssues } from "../utils/tradeProfile"
 import "./InventarioVenta.css"
 
@@ -32,7 +33,6 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
   const [vendible, setVendible] = useState(true)
   const [intercambiable, setIntercambiable] = useState(true)
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
 
   useEffect(() => {
     if (currentUser) {
@@ -58,13 +58,15 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
 
   const handleSync = async () => {
     setError("")
-    setSuccess("")
 
     try {
       const result = await dispatch(sincronizarInventario()).unwrap()
-      setSuccess(result.message)
+      dispatch(mostrarNotificacion(
+        result.message || "Inventario actualizado correctamente.",
+      ))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     }
   }
 
@@ -79,7 +81,6 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
     setVendible(true)
     setIntercambiable(true)
     setError("")
-    setSuccess("")
   }
 
   const closePublishModal = () => {
@@ -91,7 +92,6 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
   const handlePublish = async (event) => {
     event.preventDefault()
     setError("")
-    setSuccess("")
 
     const parsedPrice = Number(price)
     if (!canSellFromProfile) {
@@ -116,11 +116,14 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
         vendible,
         intercambiable,
       })).unwrap()
-      setSuccess(result.message || "Publicacion creada correctamente.")
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion creada correctamente.",
+      ))
       setSelectedItem(null)
       setPrice("")
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     }
   }
 
@@ -197,7 +200,6 @@ function InventarioVenta({ goToLogin, goToPerfil, openPublicacion }) {
       {(error || reduxError) && (
         <p className="inventory-error">{error || reduxError}</p>
       )}
-      {success && <p className="inventory-success">{success}</p>}
 
       {loading && <p className="inventory-message">Cargando inventario...</p>}
 

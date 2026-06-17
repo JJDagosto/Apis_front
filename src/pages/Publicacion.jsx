@@ -3,6 +3,7 @@ import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-i
 import { useDispatch, useSelector } from "react-redux"
 import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
 import { resetCheckout } from "../Redux/checkoutSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { despublicarPublicacion, editarPublicacion } from "../Redux/publicacionesSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Publicacion.css"
@@ -34,8 +35,6 @@ function Publicacion({
   const [deactivating, setDeactivating] = useState(false)
   const [ownerPrice, setOwnerPrice] = useState("")
   const [error, setError] = useState("")
-  const [cartMessage, setCartMessage] = useState("")
-  const [ownerMessage, setOwnerMessage] = useState("")
 
   useEffect(() => {
     if (skin?.price != null) {
@@ -50,8 +49,6 @@ function Publicacion({
 
   const handleCartAction = async () => {
     setError("")
-    setCartMessage("")
-    setOwnerMessage("")
 
     if (!currentUser) {
       goToLogin()
@@ -61,6 +58,10 @@ function Publicacion({
     const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
     if (tradeUrlIssue) {
       setError(`${tradeUrlIssue} Completa tu perfil para que el bot pueda enviarte la oferta de intercambio.`)
+      dispatch(mostrarNotificacion(
+        "Completa tu perfil antes de agregar skins al carrito.",
+        "error",
+      ))
       return
     }
 
@@ -69,15 +70,16 @@ function Publicacion({
     try {
       if (isInCart) {
         await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
-        setCartMessage("Skin removida del carrito.")
+        dispatch(mostrarNotificacion("Item eliminado del carrito."))
       } else {
         await dispatch(agregarAlCarrito(skin.id)).unwrap()
-        setCartMessage("Skin agregada al carrito.")
+        dispatch(mostrarNotificacion("Item agregado al carrito con exito."))
       }
 
       dispatch(resetCheckout())
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     } finally {
       setAddingCart(false)
     }
@@ -86,8 +88,6 @@ function Publicacion({
   const handleOwnerEdit = async (event) => {
     event.preventDefault()
     setError("")
-    setCartMessage("")
-    setOwnerMessage("")
 
     const price = Number(ownerPrice)
     if (!price || price <= 0) {
@@ -104,9 +104,10 @@ function Publicacion({
         vendible: skin.vendible !== false,
         intercambiable: skin.intercambiable !== false,
       })).unwrap()
-      setOwnerMessage("Precio actualizado.")
+      dispatch(mostrarNotificacion("Precio actualizado correctamente."))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     } finally {
       setSavingOwner(false)
     }
@@ -114,8 +115,6 @@ function Publicacion({
 
   const handleDeactivate = async () => {
     setError("")
-    setCartMessage("")
-    setOwnerMessage("")
 
     const confirmed = window.confirm("Seguro que queres dar de baja esta publicacion?")
     if (!confirmed) return
@@ -123,9 +122,12 @@ function Publicacion({
     setDeactivating(true)
     try {
       const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
-      setOwnerMessage(result.message || "Publicacion dada de baja.")
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion dada de baja.",
+      ))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     } finally {
       setDeactivating(false)
     }
@@ -133,8 +135,6 @@ function Publicacion({
 
   const handleBuyNow = () => {
     setError("")
-    setCartMessage("")
-    setOwnerMessage("")
 
     if (!currentUser) {
       goToLogin()
@@ -214,8 +214,6 @@ function Publicacion({
           </div>
 
           {error && <p className="publication-error">{error}</p>}
-          {cartMessage && <p className="publication-success">{cartMessage}</p>}
-          {ownerMessage && <p className="publication-success">{ownerMessage}</p>}
 
           {isOwnPublication ? (
             <form className="publication-owner-panel" onSubmit={handleOwnerEdit}>

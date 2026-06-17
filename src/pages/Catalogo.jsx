@@ -2,6 +2,7 @@
 import { useDispatch, useSelector } from "react-redux"
 import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
 import { resetCheckout } from "../Redux/checkoutSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import CatalogFilters from "../components/CatalogFilters.jsx"
 import Card from "../components/Card.jsx"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
@@ -23,7 +24,6 @@ function Catalogo({
   const cartItems = carrito?.items ?? []
   const myPublications = useSelector((state) => state.publicaciones.items)
   const [error, setError] = useState("")
-  const [cartMessage, setCartMessage] = useState("")
   const [addingSkinId, setAddingSkinId] = useState(null)
   const [filters, setFilters] = useState({
     exterior: "",
@@ -73,7 +73,6 @@ function Catalogo({
 
   const handleCartClick = async (skinId) => {
     setError("")
-    setCartMessage("")
 
     if (!currentUser) {
       goToLogin()
@@ -83,6 +82,10 @@ function Catalogo({
     const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
     if (tradeUrlIssue) {
       setError(`${tradeUrlIssue} Completa tu perfil antes de agregar skins al carrito.`)
+      dispatch(mostrarNotificacion(
+        "Completa tu perfil antes de agregar skins al carrito.",
+        "error",
+      ))
       goToPerfil?.()
       return
     }
@@ -93,15 +96,16 @@ function Catalogo({
     try {
       if (cartItem) {
         await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
-        setCartMessage("Skin removida del carrito.")
+        dispatch(mostrarNotificacion("Item eliminado del carrito."))
       } else {
         await dispatch(agregarAlCarrito(skinId)).unwrap()
-        setCartMessage("Skin agregada al carrito.")
+        dispatch(mostrarNotificacion("Item agregado al carrito con exito."))
       }
 
       dispatch(resetCheckout())
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     } finally {
       setAddingSkinId(null)
     }
@@ -198,7 +202,6 @@ function Catalogo({
                 </button>
               </p>
             )}
-            {cartMessage && <p className="catalog-success">{cartMessage}</p>}
             <div className="d-flex overflow-auto gap-3 flex-wrap justify-content-start">
               {loading && <p className="catalog-message">Cargando catalogo...</p>}
 

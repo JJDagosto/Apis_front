@@ -7,6 +7,7 @@ import publicacionesReducer from "./publicacionesSlice"
 import inventarioReducer from "./inventarioSlice"
 import checkoutReducer from "./checkoutSlice"
 import adminReducer from "./adminSlice"
+import notificacionesReducer from "./notificacionesSlice"
 
 export const store = configureStore({
   reducer: {
@@ -18,5 +19,6 @@ export const store = configureStore({
     inventario: inventarioReducer,
     checkout: checkoutReducer,
     admin: adminReducer,
+    notificaciones: notificacionesReducer,
   },
 })

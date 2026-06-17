@@ -3,6 +3,7 @@ import { FaTrash, FaShoppingCart } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { eliminarItemCarrito, vaciarCarrito } from "../Redux/carritoSlice"
 import { resetCheckout } from "../Redux/checkoutSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 import "./Carrito.css"
 
@@ -19,7 +20,6 @@ function Carrito({ goToLogin, goToCatalogo, goToPerfil, goToCheckout }) {
     (state) => state.carrito,
   )
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
   const [cupon, setCupon] = useState("")
 
   if (!currentUser) {
@@ -41,35 +41,39 @@ function Carrito({ goToLogin, goToCatalogo, goToPerfil, goToCheckout }) {
 
   const handleRemove = async (itemId) => {
     setError("")
-    setSuccess("")
 
     try {
       await dispatch(eliminarItemCarrito(itemId)).unwrap()
       dispatch(resetCheckout())
+      dispatch(mostrarNotificacion("Item eliminado del carrito."))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     }
   }
 
   const handleClear = async () => {
     setError("")
-    setSuccess("")
 
     try {
       await dispatch(vaciarCarrito()).unwrap()
       dispatch(resetCheckout())
-      setSuccess("Carrito vaciado.")
+      dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     }
   }
 
   const handleCheckout = () => {
     setError("")
-    setSuccess("")
 
     if (tradeUrlIssue) {
       setError(`${tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.`)
+      dispatch(mostrarNotificacion(
+        "Completa tu perfil antes de continuar con la compra.",
+        "error",
+      ))
       return
     }
 
@@ -92,7 +96,6 @@ function Carrito({ goToLogin, goToCatalogo, goToPerfil, goToCheckout }) {
 
       {loading && <p className="cart-message">Cargando carrito...</p>}
       {displayError && <p className="cart-error">{displayError}</p>}
-      {success && <p className="cart-success">{success}</p>}
 
       {!loading && items.length === 0 && (
         <section className="cart-empty">

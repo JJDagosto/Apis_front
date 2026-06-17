@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import NavBar from './components/NavBar'
+import NotificationCenter from './components/NotificationCenter'
 
 import Home from './pages/Home'
 import Catalogo from './pages/Catalogo'
@@ -86,6 +87,7 @@ function App() {
 
   return (
     <>
+      <NotificationCenter />
       <NavBar
         setCurrentPage={navigate}
         currentUser={currentUser}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { updateCurrentUser } from "../Redux/authSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { isValidSteamTradeUrl } from "../utils/tradeProfile"
 import "./Perfil.css"
 
@@ -20,7 +21,6 @@ function Perfil({ goToLogin }) {
   const currentUser = useSelector((state) => state.auth.currentUser)
   const [form, setForm] = useState(emptyProfile)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState("")
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -59,7 +59,6 @@ function Perfil({ goToLogin }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    setSuccess("")
     setError("")
 
     if (form.steamId64.trim() && !/^\d{17}$/.test(form.steamId64.trim())) {
@@ -91,9 +90,10 @@ function Perfil({ goToLogin }) {
 
       await dispatch(updateCurrentUser(payload)).unwrap()
       setForm((currentForm) => ({ ...currentForm, password: "" }))
-      setSuccess("Perfil actualizado correctamente.")
+      dispatch(mostrarNotificacion("Perfil actualizado correctamente."))
     } catch (error) {
       setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
     } finally {
       setLoading(false)
     }
@@ -244,7 +244,6 @@ function Perfil({ goToLogin }) {
           </div>
 
           {error && <p className="profile-error">{error}</p>}
-          {success && <p className="profile-success">{success}</p>}
 
           <button type="submit" disabled={loading}>
             {loading ? "Guardando..." : "Guardar cambios"}

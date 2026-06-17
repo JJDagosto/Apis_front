@@ -9,6 +9,7 @@ import {
   fetchAdminDashboard,
   inactivarSkinAdmin,
 } from "../Redux/adminSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import "./AdminDevTools.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -61,7 +62,6 @@ function AdminDevTools({ goToCatalogo }) {
     multiUso: true,
   })
   const [actionId, setActionId] = useState(null)
-  const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [publicacionesPage, setPublicacionesPage] = useState(1)
 
@@ -157,7 +157,6 @@ function AdminDevTools({ goToCatalogo }) {
   const handleCatalogSearch = async (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
     setSelectedCatalog(null)
 
     if (!catalogSearch.trim()) {
@@ -169,16 +168,21 @@ function AdminDevTools({ goToCatalogo }) {
       const data = await dispatch(
         buscarCatalogoAdmin(catalogSearch.trim()),
       ).unwrap()
-      if (data.length === 0) setMessage("No encontramos skins con ese nombre.")
+      if (data.length === 0) {
+        dispatch(mostrarNotificacion(
+          "No encontramos skins con ese nombre.",
+          "info",
+        ))
+      }
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     }
   }
 
   const handleCreateSkin = async (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
 
     const parsedPrice = Number(price)
     const seller = resolveSeller()
@@ -206,9 +210,12 @@ function AdminDevTools({ goToCatalogo }) {
           stock: 1,
         },
       })).unwrap()
-      setMessage(`Publicacion admin creada para ${seller.email}.`)
+      dispatch(mostrarNotificacion(
+        `Publicacion admin creada para ${seller.email}.`,
+      ))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -221,13 +228,15 @@ function AdminDevTools({ goToCatalogo }) {
     if (!confirmed) return
 
     setError("")
-    setMessage("")
     setActionId(`skin-${skin.id}`)
     try {
       const result = await dispatch(inactivarSkinAdmin(skin.id)).unwrap()
-      setMessage(result.message || "Publicacion eliminada.")
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion eliminada.",
+      ))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -236,7 +245,6 @@ function AdminDevTools({ goToCatalogo }) {
   const handleCreateCoupon = async (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
 
     const discount = Number(couponForm.descuentoPct)
     if (!couponForm.codigo.trim()) {
@@ -252,9 +260,10 @@ function AdminDevTools({ goToCatalogo }) {
     try {
       await dispatch(crearCuponAdmin(couponForm)).unwrap()
       setCouponForm({ codigo: "", descuentoPct: "10", fechaExpiracion: "", multiUso: true })
-      setMessage("Cupon creado.")
+      dispatch(mostrarNotificacion("Cupon creado correctamente."))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -265,13 +274,15 @@ function AdminDevTools({ goToCatalogo }) {
     if (!confirmed) return
 
     setError("")
-    setMessage("")
     setActionId(`coupon-${cupon.id}`)
     try {
       const result = await dispatch(eliminarCuponAdmin(cupon.id)).unwrap()
-      setMessage(result.message || "Cupon eliminado.")
+      dispatch(mostrarNotificacion(
+        result.message || "Cupon eliminado.",
+      ))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -310,7 +321,6 @@ function AdminDevTools({ goToCatalogo }) {
         {(error || reduxError) && (
           <p className="admin-dev-error">{error || reduxError}</p>
         )}
-        {message && <p className="admin-dev-success">{message}</p>}
         {loading && <p className="admin-dev-message">Cargando datos admin...</p>}
 
         {!loading && (

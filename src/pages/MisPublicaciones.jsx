@@ -8,6 +8,7 @@ import {
   fetchDetallePublicaciones,
   fetchMisPublicaciones,
 } from "../Redux/publicacionesSlice"
+import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import "./MisPublicaciones.css"
 
 const limpiarNombreSkin = (nombre = "") => {
@@ -59,7 +60,6 @@ function MisPublicaciones({ goToLogin }) {
   } = useSelector((state) => state.publicaciones)
   const loading = status === "loading" || detailStatus === "loading"
   const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
   const [actionId, setActionId] = useState(null)
   const [editItem, setEditItem] = useState(null)
   const [editPrice, setEditPrice] = useState("")
@@ -91,13 +91,15 @@ function MisPublicaciones({ goToLogin }) {
 
   const handleDespublicar = async (skin) => {
     setError("")
-    setSuccess("")
     setActionId(skin.id)
     try {
       const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
-      setSuccess(result.message || "Publicacion dada de baja.")
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion dada de baja.",
+      ))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -105,13 +107,15 @@ function MisPublicaciones({ goToLogin }) {
 
   const handleActivar = async (skin) => {
     setError("")
-    setSuccess("")
     setActionId(skin.id)
     try {
       const result = await dispatch(activarPublicacion(skin.id)).unwrap()
-      setSuccess(result.message || "Publicacion reactivada.")
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion reactivada.",
+      ))
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setActionId(null)
     }
@@ -119,7 +123,6 @@ function MisPublicaciones({ goToLogin }) {
 
   const openEdit = (skin) => {
     setError("")
-    setSuccess("")
     setEditItem(skin)
     setEditPrice(String(skin.price ?? ""))
     setEditVendible(skin.vendible !== false)
@@ -134,7 +137,6 @@ function MisPublicaciones({ goToLogin }) {
   const handleEditSubmit = async (event) => {
     event.preventDefault()
     setError("")
-    setSuccess("")
 
     const price = Number(editPrice)
     if (!price || price <= 0) {
@@ -155,10 +157,11 @@ function MisPublicaciones({ goToLogin }) {
         vendible: editVendible,
         intercambiable: editIntercambiable,
       })).unwrap()
-      setSuccess("Publicacion actualizada.")
+      dispatch(mostrarNotificacion("Publicacion actualizada correctamente."))
       setEditItem(null)
     } catch (err) {
       setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
     } finally {
       setSaving(false)
     }
@@ -262,7 +265,6 @@ function MisPublicaciones({ goToLogin }) {
       </header>
 
       {(error || reduxError) && <p className="pub-error">{error || reduxError}</p>}
-      {success && <p className="pub-success">{success}</p>}
       {loading && <p className="pub-message">Cargando publicaciones...</p>}
 
       {!loading && (

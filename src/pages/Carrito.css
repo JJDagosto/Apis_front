@@ -7,13 +7,18 @@
   align-items: center;
   display: flex;
   justify-content: space-between;
-  gap: 24px;
+  gap: 32px;
   margin-bottom: 22px;
+}
+
+.cart-header > div {
+  text-align: left;
 }
 
 .cart-header h1 {
   font-size: 1.9rem;
   margin: 0 0 6px;
+  text-align: left;
 }
 
 .cart-header p,
@@ -183,6 +188,12 @@
   padding: 10px 14px;
 }
 
+.cart-clear {
+  font-size: 1rem;
+  min-height: 48px;
+  padding: 12px 22px;
+}
+
 .cart-summary > button:disabled {
   background-color: rgba(255, 202, 44, 0.42);
   border-color: rgba(255, 202, 44, 0.18);
@@ -214,6 +225,12 @@
 }
 
 @media (max-width: 900px) {
+  .cart-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
   .cart-layout {
     grid-template-columns: 1fr;
   }
