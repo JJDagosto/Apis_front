@@ -1,9 +1,11 @@
 import { useState } from "react"
 import logo from "../images/logo.png"
 import { FaShoppingCart, FaSearch } from "react-icons/fa"
+import { Link, useNavigate } from "react-router-dom"
 import "./NavBar.css"
 
-const NavBar = ({ setCurrentPage, currentUser, onLogout, cartCount = 0, onSearch }) => {
+const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
+  const navigate = useNavigate()
   const [term, setTerm] = useState("")
   const [searchOpen, setSearchOpen] = useState(false)
   const isAdmin = currentUser?.role === "ADMIN"
@@ -17,30 +19,28 @@ const NavBar = ({ setCurrentPage, currentUser, onLogout, cartCount = 0, onSearch
     }
 
     onSearch?.(term.trim())
-  }
-
-  const goToPage = (page) => {
-    setCurrentPage(page)
+    navigate("/catalogo")
   }
 
   return (
     <nav className={`custom-navbar ${isAdmin ? "admin-navbar" : ""}`}>
-      <button className="navbar-brand-button" type="button" onClick={() => goToPage("home")}>
+      <Link className="navbar-brand-button" to="/" aria-label="Inicio">
         <div id="logo"><img src={logo} alt="logo" width="92" /></div>
-      </button>
+      </Link>
 
       <ul className="navbar-nav custom-nav-links">
-        <li><button type="button" className="nav-link blanco" onClick={() => goToPage("home")}>Inicio</button></li>
-        <li><button type="button" className="nav-link blanco" onClick={() => goToPage("catalogo")}>Comprar</button></li>
-        <li><button type="button" className="nav-link blanco" onClick={() => goToPage(currentUser ? "inventarioVenta" : "login")}>Vender</button></li>
+        <li><Link className="nav-link blanco" to="/">Inicio</Link></li>
+        <li><Link className="nav-link blanco" to="/catalogo">Skins</Link></li>
+        <li><Link className="nav-link blanco" to="/intercambiar">Intercambiar</Link></li>
+        <li><Link className="nav-link blanco" to={currentUser ? "/vender" : "/login"}>Inventario</Link></li>
         {currentUser && (
-          <li><button type="button" className="nav-link blanco" onClick={() => goToPage("misPublicaciones")}>Mis publicaciones</button></li>
+          <li><Link className="nav-link blanco" to="/mis-publicaciones">Mis publicaciones</Link></li>
         )}
         {currentUser?.role === "ADMIN" && (
-          <li><button type="button" className="nav-link blanco" onClick={() => goToPage("adminDevTools")}>Panel admin</button></li>
+          <li><Link className="nav-link blanco" to="/admin">Panel admin</Link></li>
         )}
-        <li><button type="button" className="nav-link blanco" onClick={() => goToPage("comoFunciona")}>Como funciona</button></li>
-        <li><button type="button" className="nav-link blanco" onClick={() => goToPage("soporte")}>Soporte</button></li>
+        <li><Link className="nav-link blanco" to="/como-funciona">Como funciona</Link></li>
+        <li><Link className="nav-link blanco" to="/soporte">Soporte</Link></li>
       </ul>
 
       <div className="nav-actions">
@@ -62,7 +62,7 @@ const NavBar = ({ setCurrentPage, currentUser, onLogout, cartCount = 0, onSearch
           </button>
         </form>
 
-        <button className="nav-icon-button cart-nav-button" type="button" onClick={() => goToPage(currentUser ? "carrito" : "login")} title="Carrito">
+        <button className="nav-icon-button cart-nav-button" type="button" onClick={() => navigate(currentUser ? "/carrito" : "/login")} title="Carrito">
           <FaShoppingCart size={20} className="blanco" />
           {currentUser && cartCount > 0 && <span className="cart-badge">{cartCount > 99 ? "99+" : cartCount}</span>}
         </button>
@@ -73,7 +73,7 @@ const NavBar = ({ setCurrentPage, currentUser, onLogout, cartCount = 0, onSearch
             <button
               className="nav-username"
               type="button"
-              onClick={() => goToPage("perfil")}
+              onClick={() => navigate("/perfil")}
             >
               {isAdmin && <span className="admin-user-pill">ADMIN</span>}
               {currentUser.username}
@@ -87,14 +87,14 @@ const NavBar = ({ setCurrentPage, currentUser, onLogout, cartCount = 0, onSearch
             <button
               className="btn btn-outline-warning nav-session-button"
               type="button"
-              onClick={() => goToPage("register")}
+              onClick={() => navigate("/register")}
             >
               Registrarse
             </button>
             <button
               className="btn btn-warning nav-session-button"
               type="button"
-              onClick={() => goToPage("login")}
+              onClick={() => navigate("/login")}
             >
               Iniciar sesion
             </button>

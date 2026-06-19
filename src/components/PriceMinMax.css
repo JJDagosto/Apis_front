@@ -1,12 +1,6 @@
 .price-filter {
-  margin-top: 24px;
-  padding-bottom: 28px;
+  padding-top: 10px;
   width: 100%;
-}
-
-.price-filter h6 {
-  color: #fff;
-  margin-bottom: 12px;
 }
 
 .price-filter-row {

@@ -1,5 +1,6 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSelector, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
+import { limpiarNombreSkin } from "../utils/skinFormat"
 import {
   activarPublicacion,
   despublicarPublicacion,
@@ -22,15 +23,56 @@ export const fetchCatalogo = createAsyncThunk(
   },
 )
 
+const initialFilters = {
+  exterior: "",
+  rareza: "",
+  categoria: "",
+  precioMin: "",
+  precioMax: "",
+  intercambiable: false,
+  vendible: false,
+}
+
 const catalogoSlice = createSlice({
   name: "catalogo",
   initialState: {
     items: [],
+    filters: { ...initialFilters },
+    sortOrder: "",
+    searchTerm: "",
     status: "idle",
     loading: true,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    setCatalogFilter: (state, action) => {
+      const { filterName, value } = action.payload
+      state.filters[filterName] =
+        state.filters[filterName] === value ? "" : value
+    },
+    setCatalogPriceFilter: (state, action) => {
+      const { filterName, value } = action.payload
+      state.filters[filterName] = value
+    },
+    toggleCatalogBoolFilter: (state, action) => {
+      const filterName = action.payload
+      state.filters[filterName] = !state.filters[filterName]
+    },
+    setCatalogSort: (state, action) => {
+      state.sortOrder = action.payload || ""
+    },
+    setCatalogSearchTerm: (state, action) => {
+      state.searchTerm = action.payload || ""
+    },
+    clearCatalogSearch: (state) => {
+      state.searchTerm = ""
+    },
+    resetCatalogFilters: (state) => {
+      state.filters = { ...initialFilters }
+      state.sortOrder = ""
+      state.searchTerm = ""
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchCatalogo.pending, (state) => {
@@ -81,5 +123,89 @@ const catalogoSlice = createSlice({
       })
   },
 })
+
+export const {
+  setCatalogFilter,
+  setCatalogPriceFilter,
+  toggleCatalogBoolFilter,
+  setCatalogSort,
+  setCatalogSearchTerm,
+  clearCatalogSearch,
+  resetCatalogFilters,
+} = catalogoSlice.actions
+
+export const selectCatalogFilters = (state) => state.catalogo.filters
+export const selectCatalogSearchTerm = (state) => state.catalogo.searchTerm
+export const selectCatalogSortOrder = (state) => state.catalogo.sortOrder
+
+export const selectFilteredCatalogItems = createSelector(
+  [
+    (state) => state.catalogo.items,
+    selectCatalogFilters,
+    selectCatalogSearchTerm,
+    selectCatalogSortOrder,
+  ],
+  (items, filters, searchTerm, sortOrder) => {
+    const termino = (searchTerm ?? "").trim().toLowerCase()
+
+    const filteredItems = items.filter((skin) => {
+      const cumpleBusqueda =
+        termino === "" ||
+        (skin.name ?? "").toLowerCase().includes(termino) ||
+        (skin.catalogo?.weaponName ?? "").toLowerCase().includes(termino)
+
+      const cumpleExterior =
+        !filters.exterior || skin.catalogo?.exteriorName === filters.exterior
+
+      const cumpleRareza =
+        !filters.rareza || skin.catalogo?.rarezaName === filters.rareza
+
+      const cumpleCategoria =
+        !filters.categoria || skin.catalogo?.categoryName === filters.categoria
+
+      const cumplePrecioMin =
+        filters.precioMin === "" || skin.price >= Number(filters.precioMin)
+
+      const cumplePrecioMax =
+        filters.precioMax === "" || skin.price <= Number(filters.precioMax)
+
+      const cumpleIntercambiable =
+        !filters.intercambiable || skin.intercambiable === true
+
+      const cumpleVendible = !filters.vendible || skin.vendible === true
+
+      return skin.active !== false && (
+        cumpleBusqueda &&
+        cumpleExterior &&
+        cumpleRareza &&
+        cumpleCategoria &&
+        cumplePrecioMin &&
+        cumplePrecioMax &&
+        cumpleIntercambiable &&
+        cumpleVendible
+      )
+    })
+
+    return filteredItems.slice().sort((a, b) => {
+      switch (sortOrder) {
+        case "precio_asc":
+          return (a.price ?? 0) - (b.price ?? 0)
+        case "precio_desc":
+          return (b.price ?? 0) - (a.price ?? 0)
+        case "nombre_az":
+          return limpiarNombreSkin(a.name).localeCompare(limpiarNombreSkin(b.name))
+        case "nombre_za":
+          return limpiarNombreSkin(b.name).localeCompare(limpiarNombreSkin(a.name))
+        default:
+          return 0
+      }
+    })
+  },
+)
+
+export const selectExchangeCatalogItems = createSelector(
+  [selectFilteredCatalogItems],
+  (items) => items.filter((skin) => skin.intercambiable === true),
+)
 
 export default catalogoSlice.reducer

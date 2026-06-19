@@ -108,6 +108,21 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
+.cart-old-price {
+  text-decoration: line-through;
+}
+
+.cart-discount-badge {
+  background: rgba(255, 202, 44, 0.12);
+  border: 1px solid rgba(255, 202, 44, 0.28);
+  border-radius: 999px;
+  color: #ffca2c;
+  font-size: 0.75rem;
+  font-weight: 900;
+  margin-top: 4px;
+  padding: 2px 8px;
+}
+
 .cart-summary {
   display: flex;
   flex-direction: column;
@@ -153,9 +168,27 @@
   box-shadow: 0 0 0 3px rgba(255, 202, 44, 0.14);
 }
 
-.cart-summary div {
+.cart-summary-row {
+  align-items: center;
   display: flex;
   justify-content: space-between;
+  gap: 14px;
+}
+
+.cart-summary-discount strong,
+.cart-summary-coupon strong {
+  color: #3bd17f;
+}
+
+.cart-summary-total {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 2px;
+  padding-top: 14px;
+}
+
+.cart-summary-total strong {
+  color: #ffca2c;
+  font-size: 1.2rem;
 }
 
 .cart-setup-warning {

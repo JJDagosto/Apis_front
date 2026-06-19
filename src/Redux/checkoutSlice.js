@@ -25,23 +25,6 @@ export const iniciarCheckout = createAsyncThunk(
   async ({ cupon, email }, { getState }) => {
     const state = getState()
     const token = getToken(getState)
-    const pendingResponse = await apiRequest(
-      "/payments/bricks/orders/sync-pending",
-      { method: "POST" },
-      token,
-    )
-
-    if (approvedPayment(pendingResponse.data)) {
-      return {
-        approved: true,
-        result: {
-          status: "approved",
-          statusDetail: pendingResponse.data.statusDetail,
-        },
-        cart: await clearApprovedCart(token),
-      }
-    }
-
     const normalizedCupon = cupon || ""
     const reusableSession =
       state.checkout.session?.email === email &&
@@ -59,6 +42,23 @@ export const iniciarCheckout = createAsyncThunk(
         approved: false,
         data: state.checkout.session.data,
         session: state.checkout.session,
+      }
+    }
+
+    const pendingResponse = await apiRequest(
+      "/payments/bricks/orders/sync-pending",
+      { method: "POST" },
+      token,
+    )
+
+    if (approvedPayment(pendingResponse.data)) {
+      return {
+        approved: true,
+        result: {
+          status: "approved",
+          statusDetail: pendingResponse.data.statusDetail,
+        },
+        cart: await clearApprovedCart(token),
       }
     }
 
