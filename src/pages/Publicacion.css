@@ -165,6 +165,20 @@
   margin: 2px 0 0;
 }
 
+.publication-seller-link {
+  background: transparent;
+  border: 0;
+  color: #ffca2c;
+  font-weight: 800;
+  padding: 0;
+  text-align: left;
+}
+
+.publication-seller-link:hover,
+.publication-seller-link:focus-visible {
+  text-decoration: underline;
+}
+
 .publication-description {
   margin-top: 24px;
   padding: 24px;

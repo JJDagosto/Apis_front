@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import {
   selectCatalogFilters,
@@ -8,7 +9,6 @@ import {
 import BooleanFilterList from "./catalogo/BooleanFilterList.jsx"
 import FilterOptionList from "./catalogo/FilterOptionList.jsx"
 import {
-  categoryFilters,
   exteriorFilters,
   rarityFilters,
 } from "./catalogo/catalogFilterOptions"
@@ -17,6 +17,16 @@ import PriceMinMax from "./PriceMinMax"
 function CatalogFilters() {
   const dispatch = useDispatch()
   const filters = useSelector(selectCatalogFilters)
+  const catalogItems = useSelector((state) => state.catalogo.items)
+  const weaponFilters = useMemo(() => (
+    Array.from(new Set(
+      catalogItems
+        .map((skin) => skin.catalogo?.weaponName)
+        .filter(Boolean),
+    ))
+      .sort((a, b) => a.localeCompare(b))
+      .map((weapon) => ({ label: weapon, value: weapon }))
+  ), [catalogItems])
 
   return (
     <div className="d-flex flex-column align-items-start catalog-filters">
@@ -47,10 +57,10 @@ function CatalogFilters() {
       />
 
       <FilterOptionList
-        title="Type"
-        filterName="categoria"
+        title="Arma"
+        filterName="arma"
         filters={filters}
-        options={categoryFilters}
+        options={weaponFilters}
         onSelect={(filterName, value) => dispatch(setCatalogFilter({ filterName, value }))}
       />
 

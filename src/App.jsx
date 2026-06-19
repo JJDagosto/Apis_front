@@ -11,6 +11,7 @@ import Catalogo from './pages/Catalogo'
 import Intercambiar from './pages/Intercambiar'
 import Prueba from './pages/Prueba'
 import Publicacion from './pages/Publicacion'
+import Vendedor from './pages/Vendedor'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Perfil from './pages/Perfil'
@@ -20,6 +21,7 @@ import MisPublicaciones from './pages/MisPublicaciones'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import VerifyEmail from './pages/VerifyEmail'
+import SteamCallback from './pages/SteamCallback'
 import Checkout from './pages/Checkout'
 import ComoFunciona from './pages/ComoFunciona'
 import Soporte from './pages/Soporte'
@@ -109,9 +111,11 @@ function App() {
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/intercambiar" element={<Intercambiar />} />
         <Route path="/publicacion/:skinId" element={<Publicacion />} />
+        <Route path="/vendedor/:sellerName" element={<Vendedor />} />
         <Route path="/carrito" element={<Carrito />} />
         <Route path="/checkout" element={<Checkout cupon={checkoutCupon} />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/login/steam/callback" element={<SteamCallback />} />
         <Route path="/register" element={<Register />} />
         <Route path="/olvidar-contrasena" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPasswordRoute />} />

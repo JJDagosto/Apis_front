@@ -2,6 +2,7 @@ import { useState } from "react"
 import logo from "../images/logo.png"
 import { FaShoppingCart, FaSearch } from "react-icons/fa"
 import { Link, useNavigate } from "react-router-dom"
+import SteamLoginButton from "./SteamLoginButton.jsx"
 import "./NavBar.css"
 
 const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
@@ -39,7 +40,7 @@ const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
         {currentUser?.role === "ADMIN" && (
           <li><Link className="nav-link blanco" to="/admin">Panel admin</Link></li>
         )}
-        <li><Link className="nav-link blanco" to="/como-funciona">Como funciona</Link></li>
+        <li><Link className="nav-link blanco" to="/como-funciona">Cómo funciona</Link></li>
         <li><Link className="nav-link blanco" to="/soporte">Soporte</Link></li>
       </ul>
 
@@ -91,13 +92,9 @@ const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
             >
               Registrarse
             </button>
-            <button
-              className="btn btn-warning nav-session-button"
-              type="button"
-              onClick={() => navigate("/login")}
-            >
-              Iniciar sesion
-            </button>
+            <SteamLoginButton
+              className="btn btn-warning nav-session-button nav-steam-button"
+            />
           </div>
         )}
       </div>

@@ -201,7 +201,7 @@
 .admin-stats {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-bottom: 20px;
 }
 
@@ -220,6 +220,7 @@
 .admin-section-header p,
 .admin-row span,
 .admin-coupon-row span,
+.admin-claim-row span,
 .admin-mini-list p {
   color: rgba(255, 255, 255, 0.68);
 }
@@ -238,6 +239,7 @@
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
   grid-template-areas:
     "publicaciones resumen"
+    "publicaciones reclamos"
     "publicaciones cupones"
     "publicaciones crear";
 }
@@ -256,6 +258,10 @@
 
 .admin-coupons-card {
   grid-area: cupones;
+}
+
+.admin-claims-card {
+  grid-area: reclamos;
 }
 
 .admin-create-card {
@@ -298,6 +304,7 @@
 
 .admin-table,
 .admin-coupon-list,
+.admin-claims-list,
 .admin-catalog-results {
   display: flex;
   flex-direction: column;
@@ -320,7 +327,8 @@
 }
 
 .admin-row,
-.admin-coupon-row {
+.admin-coupon-row,
+.admin-claim-row {
   align-items: center;
   background-color: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -334,6 +342,10 @@
   grid-template-columns: 54px minmax(0, 1fr) auto auto auto;
 }
 
+.admin-claim-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
 .admin-row img {
   aspect-ratio: 1;
   object-fit: contain;
@@ -341,7 +353,8 @@
 }
 
 .admin-row strong,
-.admin-coupon-row strong {
+.admin-coupon-row strong,
+.admin-claim-row strong {
   display: block;
 }
 
@@ -585,6 +598,7 @@
     grid-template-areas:
       "resumen resumen"
       "publicaciones publicaciones"
+      "reclamos reclamos"
       "cupones crear";
   }
 }
@@ -593,6 +607,7 @@
   .admin-dashboard,
   .admin-stats,
   .admin-row,
+  .admin-claim-row,
   .admin-dev-search.compact,
   .admin-create-skin,
   .admin-section-header {
@@ -602,6 +617,7 @@
   .admin-dashboard {
     grid-template-areas:
       "resumen"
+      "reclamos"
       "publicaciones"
       "cupones"
       "crear";

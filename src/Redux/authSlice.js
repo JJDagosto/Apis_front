@@ -16,6 +16,29 @@ export const loginUser = createAsyncThunk("auth/loginUser", async ({ email, pass
   }
 })
 
+export const fetchSteamLoginUrl = createAsyncThunk(
+  "auth/fetchSteamLoginUrl",
+  async ({ redirectUrl }) => {
+    const query = redirectUrl
+      ? `?redirectUrl=${encodeURIComponent(redirectUrl)}`
+      : ""
+    const response = await apiRequest(`/api/v1/auth/steam/login-url${query}`)
+    return response.data.url
+  },
+)
+
+export const loginWithSteamToken = createAsyncThunk(
+  "auth/loginWithSteamToken",
+  async (token) => {
+    const userResponse = await apiRequest("/api/v1/users/me", {}, token)
+
+    return {
+      token,
+      user: userResponse.data,
+    }
+  },
+)
+
 export const registerUser = createAsyncThunk("auth/registerUser", async (payload) => {
   const response = await apiRequest("/api/v1/auth/register", {
     method: "POST",
@@ -111,6 +134,30 @@ const authSlice = createSlice({
         state.currentUser = action.payload.user
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.error.message
+      })
+      .addCase(fetchSteamLoginUrl.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchSteamLoginUrl.fulfilled, (state) => {
+        state.loading = false
+      })
+      .addCase(fetchSteamLoginUrl.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.error.message
+      })
+      .addCase(loginWithSteamToken.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(loginWithSteamToken.fulfilled, (state, action) => {
+        state.loading = false
+        state.token = action.payload.token
+        state.currentUser = action.payload.user
+      })
+      .addCase(loginWithSteamToken.rejected, (state, action) => {
         state.loading = false
         state.error = action.error.message
       })

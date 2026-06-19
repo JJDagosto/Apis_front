@@ -47,7 +47,7 @@ const Card = ({
             onClick={handleActionClick}
             title={
               isOwnPublication
-                ? "Administrar publicacion"
+                ? "Administrar publicación"
                 : addingToCart
                   ? "Actualizando..."
                   : (inCart ? "Remover del carrito" : "Agregar al carrito")

@@ -19,7 +19,7 @@ export const hasAliasCobro = (user) => Boolean(user?.aliasCobro?.trim() || user?
 
 export const getTradeUrlIssue = (user, action = "operar") => {
   if (isValidSteamTradeUrl(user?.tradeUrl)) return ""
-  return `Necesitas cargar una Steam Trade URL valida en Mi cuenta antes de ${action}.`
+  return `Necesitás cargar una Steam Trade URL válida en Mi cuenta antes de ${action}.`
 }
 
 export const getSellingSetupIssues = (user) => {
@@ -27,7 +27,7 @@ export const getSellingSetupIssues = (user) => {
   const tradeIssue = getTradeUrlIssue(user, "vender")
   if (tradeIssue) issues.push(tradeIssue)
   if (!hasAliasCobro(user)) {
-    issues.push("Necesitas cargar un alias de cobro en Mi cuenta antes de vender.")
+    issues.push("Necesitás cargar un alias de cobro en Mi cuenta antes de vender.")
   }
   return issues
 }

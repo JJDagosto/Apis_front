@@ -38,7 +38,7 @@ function Notification({ notification }) {
       <button
         type="button"
         onClick={() => dispatch(cerrarNotificacion(notification.id))}
-        aria-label="Cerrar notificacion"
+        aria-label="Cerrar notificación"
       >
         <FaTimes />
       </button>

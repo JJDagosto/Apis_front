@@ -92,9 +92,10 @@
 
 @media (max-width: 640px) {
   .app-notification-center {
+    left: 12px;
     top: 82px;
     right: 12px;
-    width: calc(100vw - 24px);
+    width: auto;
   }
 }
 

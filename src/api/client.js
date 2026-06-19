@@ -28,7 +28,7 @@ export const apiRequest = async (path, options = {}, tokenOverride) => {
   const json = text ? JSON.parse(text) : null
 
   if (!response.ok) {
-    throw new Error(json?.message || "Ocurrio un error con la solicitud.")
+    throw new Error(json?.message || "Ocurrió un error con la solicitud.")
   }
 
   return json

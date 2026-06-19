@@ -11,6 +11,28 @@ import {
   crearSkinAdminParaUsuario,
   inactivarSkinAdmin,
 } from "./adminSlice"
+import { iniciarCheckout } from "./checkoutSlice"
+
+const isVisibleCatalogItem = (skin) => {
+  const status = skin.estadoPublicacion
+  return skin.active !== false && (!status || status === "PUBLICADA")
+}
+
+const markOrderSkinsAsReserved = (state, order) => {
+  const skinIds = new Set(
+    (order?.orderDetailResponses ?? [])
+      .map((detail) => detail.skinId)
+      .filter(Boolean),
+  )
+
+  if (skinIds.size === 0) return
+
+  state.items.forEach((skin) => {
+    if (!skinIds.has(skin.id)) return
+    skin.estadoPublicacion = "RESERVADA"
+    skin.active = false
+  })
+}
 
 export const fetchCatalogo = createAsyncThunk(
   "catalogo/fetchCatalogo",
@@ -26,7 +48,7 @@ export const fetchCatalogo = createAsyncThunk(
 const initialFilters = {
   exterior: "",
   rareza: "",
-  categoria: "",
+  arma: "",
   precioMin: "",
   precioMax: "",
   intercambiable: false,
@@ -121,6 +143,9 @@ const catalogoSlice = createSlice({
           (skin) => skin.id !== action.payload.skinId,
         )
       })
+      .addCase(iniciarCheckout.fulfilled, (state, action) => {
+        markOrderSkinsAsReserved(state, action.payload.data?.order)
+      })
   },
 })
 
@@ -160,8 +185,8 @@ export const selectFilteredCatalogItems = createSelector(
       const cumpleRareza =
         !filters.rareza || skin.catalogo?.rarezaName === filters.rareza
 
-      const cumpleCategoria =
-        !filters.categoria || skin.catalogo?.categoryName === filters.categoria
+      const cumpleArma =
+        !filters.arma || skin.catalogo?.weaponName === filters.arma
 
       const cumplePrecioMin =
         filters.precioMin === "" || skin.price >= Number(filters.precioMin)
@@ -174,11 +199,11 @@ export const selectFilteredCatalogItems = createSelector(
 
       const cumpleVendible = !filters.vendible || skin.vendible === true
 
-      return skin.active !== false && (
+      return isVisibleCatalogItem(skin) && (
         cumpleBusqueda &&
         cumpleExterior &&
         cumpleRareza &&
-        cumpleCategoria &&
+        cumpleArma &&
         cumplePrecioMin &&
         cumplePrecioMax &&
         cumpleIntercambiable &&

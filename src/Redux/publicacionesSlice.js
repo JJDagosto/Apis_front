@@ -29,7 +29,7 @@ export const fetchDetallePublicaciones = createAsyncThunk(
         token,
       )
     } catch {
-      // La sincronizacion ayuda, pero no debe bloquear la pantalla.
+      // La sincronización ayuda, pero no debe bloquear la pantalla.
     }
 
     const [historialResponse, comprasResponse] = await Promise.all([
