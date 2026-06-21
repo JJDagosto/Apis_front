@@ -14,7 +14,7 @@ import {
 } from "./catalogo/catalogFilterOptions"
 import PriceMinMax from "./PriceMinMax"
 
-function CatalogFilters() {
+function CatalogFilters({ showAvailability = true }) {
   const dispatch = useDispatch()
   const filters = useSelector(selectCatalogFilters)
   const catalogItems = useSelector((state) => state.catalogo.items)
@@ -30,15 +30,17 @@ function CatalogFilters() {
 
   return (
     <div className="d-flex flex-column align-items-start catalog-filters">
-      <BooleanFilterList
-        title="Disponibilidad"
-        filters={filters}
-        options={[
-          { label: "Intercambiable", value: "intercambiable" },
-          { label: "Vendible", value: "vendible" },
-        ]}
-        onToggle={(filterName) => dispatch(toggleCatalogBoolFilter(filterName))}
-      />
+      {showAvailability && (
+        <BooleanFilterList
+          title="Disponibilidad"
+          filters={filters}
+          options={[
+            { label: "Intercambiable", value: "intercambiable" },
+            { label: "Vendible", value: "vendible" },
+          ]}
+          onToggle={(filterName) => dispatch(toggleCatalogBoolFilter(filterName))}
+        />
+      )}
 
       <FilterOptionList
         title="Float"

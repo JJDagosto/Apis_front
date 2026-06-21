@@ -3,6 +3,7 @@ import { apiRequest } from "../api/client"
 import { logout } from "./authSlice"
 import {
   iniciarCheckout,
+  pagarCheckoutConSaldo,
   procesarPagoPrueba,
   sincronizarPagoCheckout,
 } from "./checkoutSlice"
@@ -131,6 +132,11 @@ const carritoSlice = createSlice({
         }
       })
       .addCase(procesarPagoPrueba.fulfilled, (state, action) => {
+        if (action.payload.cart) {
+          state.data = action.payload.cart
+        }
+      })
+      .addCase(pagarCheckoutConSaldo.fulfilled, (state, action) => {
         if (action.payload.cart) {
           state.data = action.payload.cart
         }

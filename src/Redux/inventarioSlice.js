@@ -11,7 +11,9 @@ export const fetchInventario = createAsyncThunk(
     return response.data ?? []
   },
   {
-    condition: (_, { getState }) => getState().inventario.status === "idle",
+    condition: (options, { getState }) =>
+      getState().inventario.status !== "loading" &&
+      (options?.force || getState().inventario.status === "idle"),
   },
 )
 

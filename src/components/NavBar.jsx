@@ -1,27 +1,15 @@
-import { useState } from "react"
 import logo from "../images/logo.png"
-import { FaShoppingCart, FaSearch } from "react-icons/fa"
+import { FaShoppingCart } from "react-icons/fa"
 import { Link, useNavigate } from "react-router-dom"
 import SteamLoginButton from "./SteamLoginButton.jsx"
+import BalanceWidget from "./BalanceWidget.jsx"
+import CurrencySelector from "./CurrencySelector.jsx"
+import SalesNotificationBell from "./SalesNotificationBell.jsx"
 import "./NavBar.css"
 
-const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
+const NavBar = ({ currentUser, onLogout, cartCount = 0 }) => {
   const navigate = useNavigate()
-  const [term, setTerm] = useState("")
-  const [searchOpen, setSearchOpen] = useState(false)
   const isAdmin = currentUser?.role === "ADMIN"
-
-  const handleSearch = (event) => {
-    event.preventDefault()
-
-    if (!searchOpen) {
-      setSearchOpen(true)
-      return
-    }
-
-    onSearch?.(term.trim())
-    navigate("/catalogo")
-  }
 
   return (
     <nav className={`custom-navbar ${isAdmin ? "admin-navbar" : ""}`}>
@@ -31,7 +19,7 @@ const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
 
       <ul className="navbar-nav custom-nav-links">
         <li><Link className="nav-link blanco" to="/">Inicio</Link></li>
-        <li><Link className="nav-link blanco" to="/catalogo">Skins</Link></li>
+        <li><Link className="nav-link blanco" to="/catalogo">Market</Link></li>
         <li><Link className="nav-link blanco" to="/intercambiar">Intercambiar</Link></li>
         <li><Link className="nav-link blanco" to={currentUser ? "/vender" : "/login"}>Inventario</Link></li>
         {currentUser && (
@@ -45,39 +33,31 @@ const NavBar = ({ currentUser, onLogout, cartCount = 0, onSearch }) => {
       </ul>
 
       <div className="nav-actions">
-        <form onSubmit={handleSearch} className={`nav-search ${searchOpen ? "open" : ""}`}>
-          {searchOpen && (
-            <input
-              type="text"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              placeholder="Buscar skin..."
-              autoFocus
-              onBlur={() => {
-                if (!term.trim()) setSearchOpen(false)
-              }}
-            />
-          )}
-          <button type="submit" className="nav-icon-button" title="Buscar">
-            <FaSearch size={18} className="blanco" />
-          </button>
-        </form>
-
         <button className="nav-icon-button cart-nav-button" type="button" onClick={() => navigate(currentUser ? "/carrito" : "/login")} title="Carrito">
           <FaShoppingCart size={20} className="blanco" />
           {currentUser && cartCount > 0 && <span className="cart-badge">{cartCount > 99 ? "99+" : cartCount}</span>}
         </button>
 
+        {currentUser && <SalesNotificationBell />}
+        <CurrencySelector />
+
         {currentUser ? (
           <div className="nav-user">
-            <span className="nav-saldo blanco">${Number(currentUser.saldo ?? 0).toFixed(2)}</span>
+            <BalanceWidget currentUser={currentUser} />
             <button
               className="nav-username"
               type="button"
               onClick={() => navigate("/perfil")}
             >
+              {currentUser.steamAvatarUrl && (
+                <img
+                  className="nav-user-avatar"
+                  src={currentUser.steamAvatarUrl}
+                  alt="Avatar de Steam"
+                />
+              )}
               {isAdmin && <span className="admin-user-pill">ADMIN</span>}
-              {currentUser.username}
+              <span>{currentUser.steamUsername || currentUser.username}</span>
             </button>
             <button className="btn btn-outline-warning nav-session-button" type="button" onClick={onLogout}>
               Salir

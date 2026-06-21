@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit"
 
 const initialState = {
   checkoutCupon: "",
+  currency: "USD",
 }
 
 const appSlice = createSlice({
@@ -11,6 +12,11 @@ const appSlice = createSlice({
     setCheckoutCupon: (state, action) => {
       state.checkoutCupon = action.payload || ""
     },
+    setCurrency: (state, action) => {
+      if (["ARS", "USD"].includes(action.payload)) {
+        state.currency = action.payload
+      }
+    },
     resetAppSession: (state) => {
       state.checkoutCupon = ""
     },
@@ -19,6 +25,7 @@ const appSlice = createSlice({
 
 export const {
   setCheckoutCupon,
+  setCurrency,
   resetAppSession,
 } = appSlice.actions
 

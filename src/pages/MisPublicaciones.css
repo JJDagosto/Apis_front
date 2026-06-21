@@ -97,7 +97,17 @@
 .badge-vendida   { background: #7c3aed; }
 .badge-default   { background: #555; }
 .badge-comprada  { background: #0e7490; }
+.badge-pago-pendiente { background: #b77905; }
 .badge-eliminada-admin { background: #b91c1c; }
+
+.pub-card-payment-pending {
+  border-color: rgba(255, 202, 44, 0.45);
+}
+
+.pub-card-payment-pending .pub-trade-state {
+  background: rgba(255, 202, 44, 0.08);
+  border-left-color: #ffca2c;
+}
 
 .pub-card-body {
   padding: 12px 14px;
@@ -136,6 +146,32 @@
   text-decoration: line-through;
   color: #8b8b9c;
   font-size: 0.85rem;
+}
+
+.pub-trade-state {
+  background: rgba(124, 92, 255, 0.1);
+  border-left: 3px solid #7c5cff;
+  display: grid;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 9px 10px;
+}
+
+.pub-trade-state span {
+  color: #9f9bad;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.pub-trade-state strong {
+  color: #f2efff;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.pub-trade-state small {
+  color: #9f9bad;
+  font-size: 0.75rem;
 }
 
 .pub-flags {
@@ -296,4 +332,131 @@
   height: 16px;
   cursor: pointer;
   accent-color: #ffca2c;
+}
+
+.pub-section-heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.pub-section-heading button {
+  align-items: center;
+  background: #2d2d44;
+  border: 1px solid #41415c;
+  border-radius: 6px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.pub-section-heading button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pub-operation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pub-operation-card {
+  align-items: flex-start;
+  background: #15131f;
+  border: 1px solid #2a2a3d;
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+}
+
+.pub-operation-icon {
+  align-items: center;
+  background: rgba(123, 97, 255, 0.16);
+  border: 1px solid rgba(123, 97, 255, 0.4);
+  border-radius: 6px;
+  color: #b9adff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.pub-operation-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pub-operation-title,
+.pub-operation-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.pub-operation-title h3,
+.pub-operation-copy p {
+  margin: 0;
+}
+
+.pub-operation-title h3 {
+  font-size: 1rem;
+}
+
+.pub-operation-copy p,
+.pub-operation-copy small,
+.pub-operation-meta {
+  color: #b9b9c6;
+  font-size: 0.82rem;
+}
+
+.pub-operation-meta {
+  justify-content: flex-start;
+}
+
+.pub-operation-meta strong {
+  color: #ffca2c;
+}
+
+.pub-operation-status {
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 5px 9px;
+}
+
+.pub-operation-status.completed {
+  background: rgba(84, 217, 140, 0.14);
+  color: #65e39a;
+}
+
+.pub-operation-status.pending {
+  background: rgba(255, 202, 44, 0.12);
+  color: #ffca2c;
+}
+
+.pub-operation-status.failed {
+  background: rgba(255, 92, 112, 0.14);
+  color: #ff7888;
+}
+
+@media (max-width: 560px) {
+  .pub-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pub-operation-card {
+    padding: 13px;
+  }
 }

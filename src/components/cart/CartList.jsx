@@ -1,8 +1,10 @@
 import { FaTrash } from "react-icons/fa"
-import { formatCartPrice } from "../../utils/cartTotals"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 
 function CartList({ items, updating, onRemove }) {
+  const { formatPrice } = useCurrencyFormatter()
+
   return (
     <div className="cart-items">
       {items.map((item) => {
@@ -23,13 +25,13 @@ function CartList({ items, updating, onRemove }) {
             <div className="cart-price">
               {item.skinDiscountAmount > 0 && (
                 <small className="cart-old-price">
-                  {formatCartPrice(item.originalLineTotal)}
+                  {formatPrice(item.originalLineTotal)}
                 </small>
               )}
-              <strong>{formatCartPrice(item.finalLineTotal)}</strong>
+              <strong>{formatPrice(item.finalLineTotal)}</strong>
               {item.quantity > 1 && (
                 <small>
-                  {item.quantity} x {formatCartPrice(item.finalUnitPrice)}
+                  {item.quantity} x {formatPrice(item.finalUnitPrice)}
                 </small>
               )}
               {item.discountRate > 0 && (

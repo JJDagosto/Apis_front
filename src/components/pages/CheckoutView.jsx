@@ -1,44 +1,50 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
+import { FaCheck } from "react-icons/fa6"
 import {
   clearCheckoutResult,
   iniciarCheckout,
-  procesarPagoPrueba,
+  pagarCheckoutConSaldo,
+  prepararMercadoPagoCheckout,
   sincronizarPagoCheckout,
 } from "../../Redux/checkoutSlice"
-import { getTradeUrlIssue } from "../../utils/tradeProfile"
+import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
+import CheckoutBalancePayment from "../checkout/CheckoutBalancePayment.jsx"
+import CheckoutMercadoPagoPayment from "../checkout/CheckoutMercadoPagoPayment.jsx"
 import "../../pages/Checkout.css"
 
 const getCheckoutUrl = (data) => {
-  if (!data) return ""
+  if (!data || data.checkoutMode === "local") return ""
 
   const isTestKey = data.publicKey?.startsWith("TEST-")
-  const preferSandbox = data.checkoutMode === "sandbox" || isTestKey
+  const preferTestCheckout = data.checkoutMode === "sandbox" || isTestKey
   const serverCheckoutUrl = data.checkoutUrl || ""
   const usableServerCheckoutUrl =
-    preferSandbox === serverCheckoutUrl.includes("sandbox.mercadopago")
+    preferTestCheckout === serverCheckoutUrl.includes("sandbox.mercadopago")
       ? serverCheckoutUrl
       : ""
 
   return (
     usableServerCheckoutUrl ||
-    (preferSandbox ? data.sandboxInitPoint : data.initPoint) ||
+    (preferTestCheckout ? data.sandboxInitPoint : data.initPoint) ||
     data.initPoint ||
     data.sandboxInitPoint ||
-    (data.preferenceId
-      ? `${preferSandbox ? "https://sandbox.mercadopago.com.ar" : "https://www.mercadopago.com.ar"}/checkout/v1/redirect?pref_id=${data.preferenceId}`
-      : "")
+    ""
   )
 }
 
-function Checkout({
-  goToLogin,
-  goToCatalogo,
-  goToPerfil,
-  goToMisPublicaciones,
-  cupon,
-}) {
+const getConfirmedTradeStatus = (tradeStatus) => {
+  if (tradeStatus === "WAITING_UNLOCK") return "Esperando desbloqueo de Steam"
+  if (tradeStatus === "PREPARING_TRADE") return "Preparando intercambio"
+  if (tradeStatus === "BOT_SENT") return "Oferta de intercambio enviada"
+  if (tradeStatus === "COMPLETED") return "Intercambio completado"
+  return "Pago confirmado · Preparando entrega"
+}
+
+function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
+  const { formatPrice } = useCurrencyFormatter()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const currentUser = useSelector((state) => state.auth.currentUser)
@@ -47,42 +53,30 @@ function Checkout({
     data,
     status,
     syncing,
-    testProcessing,
+    balanceProcessing,
+    mercadoPagoProcessing,
     result,
     error: checkoutError,
   } = useSelector((state) => state.checkout)
   const syncingRef = useRef(false)
+  const notifiedOrderRef = useRef(null)
   const [localError, setLocalError] = useState("")
-  const [testCardForm, setTestCardForm] = useState({
-    cardNumber: "4509953566233704",
-    expirationMonth: "11",
-    expirationYear: "2030",
-    securityCode: "123",
-    cardholderName: "APRO",
-    email: "compradora.prueba@mail.com",
-    documentType: "DNI",
-    documentNumber: "12345678",
-    installments: "1",
-    paymentMethodId: "visa",
-  })
+
   const openLogin = goToLogin ?? (() => navigate("/login"))
   const openCatalogo = goToCatalogo ?? (() => navigate("/catalogo"))
-  const openPerfil = goToPerfil ?? (() => navigate("/perfil"))
   const openMisPublicaciones = goToMisPublicaciones ?? (() => navigate("/mis-publicaciones"))
-
   const order = data?.order
   const amount = order?.totalFinal ?? order?.totalPrice
-  const mercadoPagoUrl = getCheckoutUrl(data)
-  const brickReady = Boolean(data?.publicKey && order)
+  const checkoutUrl = getCheckoutUrl(data)
+  const checkoutReady = Boolean(order)
   const loading = status === "loading"
-  const tradeUrlIssue = currentUser
-    ? getTradeUrlIssue(currentUser, "comprar")
-    : ""
-  const error = localError || checkoutError || (
-    tradeUrlIssue
-      ? `${tradeUrlIssue} El bot necesita ese enlace para entregarte las skins.`
-      : ""
+  const error = localError || checkoutError
+  const completedResult = useMemo(
+    () => result ?? (order?.paymentStatus === "PAID" ? { status: "approved", order } : null),
+    [order, result],
   )
+  const paymentBusy = syncing || balanceProcessing || mercadoPagoProcessing
+  const mercadoPagoSelected = Boolean(data?.preferenceId)
   const normalizedCupon = cupon || ""
   const hasReusableCheckout =
     session?.email === currentUser?.email &&
@@ -90,65 +84,88 @@ function Checkout({
     session?.data?.order?.id
 
   useEffect(() => {
-    if (!currentUser || tradeUrlIssue || hasReusableCheckout) return
-
+    if (!currentUser || hasReusableCheckout || completedResult?.status === "approved") return
     dispatch(iniciarCheckout({
       cupon: normalizedCupon,
       email: currentUser.email,
     }))
-  }, [currentUser, dispatch, hasReusableCheckout, normalizedCupon, tradeUrlIssue])
+  }, [completedResult?.status, currentUser, dispatch, hasReusableCheckout, normalizedCupon])
+
+  useEffect(() => {
+    if (completedResult?.status !== "approved") return
+    const confirmedOrderId = completedResult.order?.id ?? order?.id
+    if (!confirmedOrderId || notifiedOrderRef.current === confirmedOrderId) return
+
+    notifiedOrderRef.current = confirmedOrderId
+    dispatch(mostrarNotificacion(
+      `Orden #${confirmedOrderId} confirmada. El vendedor ya fue notificado.`,
+      "success",
+    ))
+  }, [completedResult, dispatch, order?.id])
 
   const syncPaymentStatus = useCallback(async () => {
-    if (!order?.id || result || syncingRef.current) return
+    if (!order?.id || completedResult || syncingRef.current) return
     syncingRef.current = true
     setLocalError("")
-
     try {
       await dispatch(sincronizarPagoCheckout()).unwrap()
     } catch (syncError) {
-      setLocalError(
-        syncError.message || "No se pudo verificar el pago todavía.",
-      )
+      setLocalError(syncError.message || "No se pudo verificar el pago todavía.")
     } finally {
       syncingRef.current = false
     }
-  }, [dispatch, order?.id, result])
+  }, [completedResult, dispatch, order?.id])
 
   useEffect(() => {
-    if (!order?.id || result) return
+    if (!order?.id || completedResult || !checkoutUrl) return
 
     const handleFocus = () => syncPaymentStatus()
     const handleVisibility = () => {
       if (!document.hidden) syncPaymentStatus()
     }
-
     window.addEventListener("focus", handleFocus)
     document.addEventListener("visibilitychange", handleVisibility)
-    const timer = window.setInterval(syncPaymentStatus, 5000)
-
     return () => {
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibility)
-      window.clearInterval(timer)
     }
-  }, [order?.id, result, syncPaymentStatus])
+  }, [checkoutUrl, completedResult, order?.id, syncPaymentStatus])
 
-  const updateTestCardForm = (field, value) => {
-    setTestCardForm((current) => ({ ...current, [field]: value }))
+  const handleBalancePayment = async () => {
+    if (completedResult || paymentBusy) return
+    if (mercadoPagoSelected) {
+      setLocalError("Ya iniciaste el pago con Mercado Pago para esta orden.")
+      return
+    }
+    setLocalError("")
+    try {
+      await dispatch(pagarCheckoutConSaldo()).unwrap()
+    } catch (paymentError) {
+      setLocalError(paymentError.message)
+    }
   }
 
-  const handleTestCardPayment = async (event) => {
-    event.preventDefault()
+  const handleMercadoPagoPayment = async () => {
+    if (completedResult || paymentBusy) return
     setLocalError("")
+    const paymentWindow = window.open("", "_blank")
 
     try {
-      await dispatch(procesarPagoPrueba({
-        ...testCardForm,
-        expirationMonth: Number(testCardForm.expirationMonth),
-        expirationYear: Number(testCardForm.expirationYear),
-        installments: Number(testCardForm.installments) || 1,
-      })).unwrap()
+      const preparedCheckout = await dispatch(prepararMercadoPagoCheckout()).unwrap()
+      const paymentUrl = getCheckoutUrl(preparedCheckout)
+
+      if (paymentUrl) {
+        if (paymentWindow) {
+          paymentWindow.location.href = paymentUrl
+        } else {
+          window.location.assign(paymentUrl)
+        }
+      } else {
+        paymentWindow?.close()
+        throw new Error("Mercado Pago no devolvió una URL de Checkout Pro.")
+      }
     } catch (paymentError) {
+      paymentWindow?.close()
       setLocalError(paymentError.message)
     }
   }
@@ -165,22 +182,26 @@ function Checkout({
     )
   }
 
-  if (result) {
-    const aprobado = result.status === "approved"
-    const pendiente =
-      result.status === "in_process" || result.status === "pending"
-
+  if (completedResult) {
+    const approved = completedResult.status === "approved"
+    const pending = completedResult.status === "in_process" || completedResult.status === "pending"
+    const confirmedOrder = completedResult.order ?? order
     return (
       <main className="checkout-page">
-        <div className="checkout-box">
-          {aprobado && (
+        <div className="checkout-box checkout-result-box">
+          {approved && (
             <>
-              <div className="checkout-success-icon">✓</div>
-              <h1 className="checkout-ok">¡Pago aprobado!</h1>
+              <div className="checkout-success-icon" aria-hidden="true"><FaCheck /></div>
+              <h1 className="checkout-ok">Compra exitosa</h1>
               <p className="checkout-success-desc">
-                Tu compra se procesó correctamente. En unos momentos
-                vas a poder ver tu skin en tus publicaciones.
+                El pago fue aprobado y la orden qued&oacute; confirmada correctamente.
               </p>
+              {confirmedOrder?.id && (
+                <div className="checkout-confirmed-order">
+                  <span>Orden #{confirmedOrder.id}</span>
+                  <strong>{getConfirmedTradeStatus(confirmedOrder.tradeStatus)}</strong>
+                </div>
+              )}
               <button type="button" className="checkout-action-primary" onClick={openMisPublicaciones}>
                 Ver mis publicaciones
               </button>
@@ -189,22 +210,23 @@ function Checkout({
               </button>
             </>
           )}
-          {pendiente && (
+          {pending && (
             <>
               <h1 className="checkout-pending">Pago pendiente</h1>
               <p>El pago quedó en revisión. Te avisaremos cuando se confirme.</p>
+              <button type="button" className="checkout-action-primary" onClick={openMisPublicaciones}>
+                Ver en Mis publicaciones
+              </button>
               <button type="button" className="checkout-secondary" onClick={openCatalogo}>
                 Volver al catálogo
               </button>
             </>
           )}
-          {!aprobado && !pendiente && (
+          {!approved && !pending && (
             <>
               <h1 className="checkout-fail">Pago rechazado</h1>
-              <p>No se pudo procesar el pago ({result.statusDetail || result.status}).</p>
-              <button type="button" onClick={() => dispatch(clearCheckoutResult())}>
-                Reintentar
-              </button>
+              <p>No se pudo procesar el pago ({completedResult.statusDetail || completedResult.status}).</p>
+              <button type="button" onClick={() => dispatch(clearCheckoutResult())}>Reintentar</button>
               <button type="button" className="checkout-secondary" onClick={openCatalogo}>
                 Volver al catálogo
               </button>
@@ -219,126 +241,40 @@ function Checkout({
     <main className="checkout-page">
       <div className="checkout-box">
         <h1>Pagar compra</h1>
-
         {loading && <p className="checkout-message">Preparando el pago...</p>}
         {error && <p className="checkout-error">{error}</p>}
-        {tradeUrlIssue && (
-          <button type="button" className="checkout-secondary" onClick={openPerfil}>
-            Completar perfil
-          </button>
-        )}
 
-        {!loading && brickReady && amount != null && (
+        {!loading && checkoutReady && amount != null && (
           <>
             <div className="checkout-resumen">
-              <span>Orden #{order?.id}</span>
-              <strong>Total: ${Number(amount).toFixed(2)}</strong>
+              <span>Orden #{order.id}</span>
+              <strong>Total: {formatPrice(amount)}</strong>
             </div>
 
-            {mercadoPagoUrl ? (
-              <>
-                <a
-                  className="checkout-mp-button"
-                  href={mercadoPagoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Pagar con Mercado Pago
-                </a>
-                {mercadoPagoUrl.includes("sandbox.mercadopago") && (
-                  <p className="checkout-sandbox-note">Modo prueba de Mercado Pago</p>
-                )}
-                <button
-                  type="button"
-                  className="checkout-secondary"
-                  onClick={syncPaymentStatus}
-                  disabled={syncing}
-                >
-                  {syncing ? "Verificando pago..." : "Ya pagué, verificar pago"}
-                </button>
-              </>
-            ) : (
-              <p className="checkout-error">
-                No se pudo generar el link de Mercado Pago para esta orden.
-              </p>
-            )}
+            <div className="checkout-payment-list">
+              <CheckoutBalancePayment
+                balance={currentUser.saldo}
+                total={amount}
+                loading={balanceProcessing}
+                disabled={paymentBusy || mercadoPagoSelected}
+                onPay={handleBalancePayment}
+                formatPrice={formatPrice}
+              />
 
-            {window.location.hostname === "localhost" && (
-              <details className="checkout-test-details">
-                <summary>Pago sandbox para pruebas</summary>
-                <form className="checkout-test-card" onSubmit={handleTestCardPayment}>
-                  <h2>Tarjeta sandbox</h2>
-                  <div className="checkout-test-grid">
-                    <label>
-                      Número
-                      <input
-                        type="text"
-                        value={testCardForm.cardNumber}
-                        onChange={(event) => updateTestCardForm("cardNumber", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Titular
-                      <input
-                        type="text"
-                        value={testCardForm.cardholderName}
-                        onChange={(event) => updateTestCardForm("cardholderName", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Mes
-                      <input
-                        type="number"
-                        min="1"
-                        max="12"
-                        value={testCardForm.expirationMonth}
-                        onChange={(event) => updateTestCardForm("expirationMonth", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Año
-                      <input
-                        type="number"
-                        min="2026"
-                        value={testCardForm.expirationYear}
-                        onChange={(event) => updateTestCardForm("expirationYear", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      CVV
-                      <input
-                        type="text"
-                        value={testCardForm.securityCode}
-                        onChange={(event) => updateTestCardForm("securityCode", event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      DNI
-                      <input
-                        type="text"
-                        value={testCardForm.documentNumber}
-                        onChange={(event) => updateTestCardForm("documentNumber", event.target.value)}
-                      />
-                    </label>
-                    <label className="checkout-test-wide">
-                      E-mail
-                      <input
-                        type="email"
-                        value={testCardForm.email}
-                        onChange={(event) => updateTestCardForm("email", event.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <button type="submit" disabled={testProcessing || !order?.id}>
-                    {testProcessing ? "Procesando..." : "Pagar tarjeta sandbox"}
-                  </button>
-                </form>
-              </details>
-            )}
+              <CheckoutMercadoPagoPayment
+                checkoutUrl={checkoutUrl}
+                localMode={data?.checkoutMode === "local"}
+                preparing={mercadoPagoProcessing}
+                syncing={syncing}
+                disabled={paymentBusy}
+                onPrepare={handleMercadoPagoPayment}
+                onSync={syncPaymentStatus}
+              />
+            </div>
           </>
         )}
 
-        {!loading && !brickReady && !error && (
+        {!loading && !checkoutReady && !error && (
           <p className="checkout-message">No se pudo iniciar el checkout.</p>
         )}
       </div>

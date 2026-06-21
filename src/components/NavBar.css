@@ -86,28 +86,6 @@
   min-width: 0;
 }
 
-.nav-search {
-  align-items: center;
-  display: flex;
-  gap: 6px;
-}
-
-.nav-search input {
-  background: #12072f;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 6px;
-  color: #fff;
-  font-size: 0.86rem;
-  height: 34px;
-  padding: 0 10px;
-  width: 170px;
-}
-
-.nav-search input:focus {
-  border-color: #ffca2c;
-  outline: 0;
-}
-
 .nav-icon-button {
   align-items: center;
   background: rgba(255, 255, 255, 0.06);
@@ -152,24 +130,286 @@
   gap: 8px;
 }
 
-.nav-saldo {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 7px 9px;
+.currency-selector,
+.sales-notifications {
+  position: relative;
 }
 
-.nav-username {
+.currency-selector-trigger {
+  align-items: center;
   background: transparent;
   border: 0;
   color: white;
-  max-width: 120px;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 6px;
+}
+
+.currency-selector-trigger svg {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  transition: transform 0.16s ease;
+}
+
+.currency-selector-trigger svg.open {
+  transform: rotate(180deg);
+}
+
+.currency-flag {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  display: inline-block;
+  height: 22px;
   overflow: hidden;
-  padding: 0;
+  position: relative;
+  width: 22px;
+}
+
+.currency-flag-ars {
+  background: linear-gradient(
+    to bottom,
+    #75aadb 0 33%,
+    #ffffff 33% 66%,
+    #75aadb 66% 100%
+  );
+}
+
+.currency-flag-ars::after {
+  background: #f6b40e;
+  border-radius: 50%;
+  content: "";
+  height: 4px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+}
+
+.currency-flag-usd {
+  background: repeating-linear-gradient(
+    to bottom,
+    #b22234 0 2px,
+    #ffffff 2px 4px
+  );
+}
+
+.currency-flag-usd::before {
+  background: #3c3b6e;
+  content: "";
+  height: 11px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 11px;
+}
+
+.currency-menu,
+.sales-notification-menu {
+  background: #171225;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.46);
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 30;
+}
+
+.currency-menu {
+  min-width: 220px;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.currency-menu button {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: white;
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.currency-menu button:hover,
+.currency-menu button.active {
+  background: rgba(123, 97, 255, 0.18);
+}
+
+.currency-menu button span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.74rem;
+}
+
+.notification-bell-button {
+  color: white;
+  position: relative;
+}
+
+.notification-badge {
+  align-items: center;
+  background: #ffca2c;
+  border-radius: 999px;
+  color: #171225;
+  display: flex;
+  font-size: 0.64rem;
+  font-weight: 900;
+  height: 17px;
+  justify-content: center;
+  min-width: 17px;
+  padding: 0 4px;
+  position: absolute;
+  right: -6px;
+  top: -6px;
+}
+
+.sales-notification-menu {
+  color: white;
+  overflow: hidden;
+  width: min(360px, calc(100vw - 28px));
+}
+
+.sales-notification-menu > header {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 14px;
+}
+
+.sales-notification-menu > header span,
+.sales-notification-empty {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.78rem;
+}
+
+.sales-notification-empty {
+  margin: 0;
+  padding: 22px 14px;
+  text-align: center;
+}
+
+.sales-notification-list {
+  max-height: 310px;
+  overflow-y: auto;
+}
+
+.sales-notification-list article {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  padding: 10px 14px;
+}
+
+.sales-notification-list img {
+  height: 45px;
+  object-fit: contain;
+  width: 54px;
+}
+
+.sales-notification-list article div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sales-notification-list article strong,
+.sales-notification-list article span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sales-notification-list article span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.76rem;
+}
+
+.sales-notification-link {
+  background: rgba(123, 97, 255, 0.18);
+  border: 0;
+  color: #c4baff;
+  font-weight: 800;
+  min-height: 42px;
+  width: 100%;
+}
+
+.balance-widget {
+  align-items: stretch;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  min-height: 42px;
+  overflow: hidden;
+}
+
+.balance-widget-icon {
+  align-self: center;
+  color: #a18fff;
+  margin-left: 10px;
+}
+
+.balance-widget-copy {
+  background: transparent;
+  border: 0;
+  color: white;
+  display: grid;
+  line-height: 1.05;
+  padding: 5px 9px;
+  text-align: left;
+}
+
+.balance-widget-copy strong {
+  font-size: 0.82rem;
+}
+
+.balance-widget-copy span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.balance-add-button {
+  align-items: center;
+  background: #7b61ff;
+  border: 0;
+  color: white;
+  display: flex;
+  justify-content: center;
+  min-width: 34px;
+}
+
+.nav-username {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: white;
+  display: inline-flex;
+  gap: 7px;
+  max-width: 170px;
+  padding: 0;
+}
+
+.nav-username > span:last-child {
+  max-width: 105px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-user-avatar {
+  border: 2px solid rgba(123, 97, 255, 0.7);
+  border-radius: 50%;
+  height: 34px;
+  object-fit: cover;
+  width: 34px;
 }
 
 .nav-username:hover {
@@ -246,10 +486,6 @@
     flex-wrap: wrap;
     justify-content: center;
     max-width: 100%;
-  }
-
-  .nav-search input {
-    width: min(170px, calc(100vw - 120px));
   }
 
   .nav-session-button {

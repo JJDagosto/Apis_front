@@ -1,6 +1,7 @@
 import "./Card.css"
 import "./Global.css"
 import { FaPen, FaShoppingCart } from "react-icons/fa"
+import useCurrencyFormatter from "../hooks/useCurrencyFormatter"
 
 const Card = ({
   arma,
@@ -15,6 +16,8 @@ const Card = ({
   isOwnPublication = false,
   onManage,
 }) => {
+  const { formatPrice } = useCurrencyFormatter()
+
   const handleActionClick = (event) => {
     event.stopPropagation()
 
@@ -38,7 +41,7 @@ const Card = ({
           <span className="text1 m-0">{estado}</span>
         </div>
         <div className="d-flex justify-content-between align-items-center w-100 mt-3">
-          <span className="" id="precio">${precio.toFixed(2)}</span>
+          <span className="" id="precio">{formatPrice(precio)}</span>
           <button
             type="button"
             className={`btn d-flex align-items-center justify-content-center cart-card-button ${inCart ? "in-cart" : ""} ${isOwnPublication ? "own-publication" : ""}`}

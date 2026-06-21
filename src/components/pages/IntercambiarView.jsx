@@ -1,23 +1,23 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { fetchInventario, sincronizarInventario } from "../../Redux/inventarioSlice"
 import {
   clearExchangeSelection,
+  cotizarIntercambio,
+  crearIntercambio,
   toggleOfferedInventoryItem,
   toggleRequestedSkin,
 } from "../../Redux/intercambioSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
-import {
-  selectExchangeCatalogItems,
-} from "../../Redux/catalogoSlice"
+import { selectExchangeCatalogItems } from "../../Redux/catalogoSlice"
 import CatalogFilters from "../CatalogFilters.jsx"
 import CatalogModeTabs from "../catalogo/CatalogModeTabs.jsx"
-import CatalogSearchNotice from "../catalogo/CatalogSearchNotice.jsx"
 import CatalogToolbar from "../catalogo/CatalogToolbar.jsx"
 import ExchangeCatalogPanel from "../catalogo/ExchangeCatalogPanel.jsx"
 import ExchangeInventoryPanel from "../catalogo/ExchangeInventoryPanel.jsx"
 import ExchangeSummary from "../catalogo/ExchangeSummary.jsx"
+import BalanceTopUpModal from "../BalanceTopUpModal.jsx"
 
 function IntercambiarView() {
   const dispatch = useDispatch()
@@ -36,18 +36,45 @@ function IntercambiarView() {
   const {
     offeredInventoryItemIds,
     requestedSkinIds,
+    quote,
+    quoteStatus,
+    quoteError,
+    submitting,
   } = useSelector((state) => state.intercambio)
   const inventoryLoading = inventoryStatus === "loading"
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false)
   const canSubmit =
     Boolean(currentUser) &&
     offeredInventoryItemIds.length > 0 &&
-    requestedSkinIds.length > 0
+    requestedSkinIds.length > 0 &&
+    quoteStatus === "succeeded" &&
+    Number(quote?.saldoFaltante ?? 0) === 0
 
   useEffect(() => {
     if (currentUser) {
       dispatch(fetchInventario())
     }
   }, [currentUser, dispatch])
+
+  useEffect(() => {
+    if (
+      currentUser &&
+      offeredInventoryItemIds.length > 0 &&
+      requestedSkinIds.length > 0
+    ) {
+      dispatch(cotizarIntercambio({
+        inventarioItemIds: offeredInventoryItemIds,
+        skinIds: requestedSkinIds,
+        balance: currentUser.saldo,
+      }))
+    }
+  }, [
+    currentUser,
+    dispatch,
+    offeredInventoryItemIds,
+    requestedSkinIds,
+    currentUser?.saldo,
+  ])
 
   const handleSyncInventory = async () => {
     try {
@@ -60,17 +87,23 @@ function IntercambiarView() {
     }
   }
 
-  const handleSubmitExchange = () => {
-    dispatch(mostrarNotificacion(
-      "Selección de intercambio preparada. Falta conectar el endpoint final.",
-      "info",
-    ))
+  const handleSubmitExchange = async () => {
+    try {
+      const operation = await dispatch(crearIntercambio({
+        inventarioItemIds: offeredInventoryItemIds,
+        skinIds: requestedSkinIds,
+      })).unwrap()
+      dispatch(mostrarNotificacion(
+        `Intercambio #${operation.id} creado correctamente. Revisá su estado en Mis publicaciones.`,
+      ))
+    } catch (error) {
+      dispatch(mostrarNotificacion(error.message, "error"))
+    }
   }
 
   return (
     <div className="catalogo catalog-exchange-page">
       <CatalogModeTabs />
-      <CatalogSearchNotice />
 
       <div className="exchange-layout">
         <ExchangeInventoryPanel
@@ -89,13 +122,19 @@ function IntercambiarView() {
           <ExchangeSummary
             offeredCount={offeredInventoryItemIds.length}
             requestedCount={requestedSkinIds.length}
+            currentBalance={currentUser?.saldo}
+            quote={quote}
+            quoteStatus={quoteStatus}
+            quoteError={quoteError}
             canSubmit={canSubmit}
+            submitting={submitting}
+            onAddBalance={() => setBalanceModalOpen(true)}
             onClear={() => dispatch(clearExchangeSelection())}
             onSubmit={handleSubmitExchange}
           />
           <div className="exchange-filter-box">
             <CatalogToolbar />
-            <CatalogFilters />
+            <CatalogFilters showAvailability={false} />
           </div>
         </div>
 
@@ -107,6 +146,13 @@ function IntercambiarView() {
           onToggle={(skinId) => dispatch(toggleRequestedSkin(skinId))}
         />
       </div>
+      {balanceModalOpen && currentUser && (
+        <BalanceTopUpModal
+          currentUser={currentUser}
+          initialAmountUsd={Number(quote?.saldoFaltante ?? 0)}
+          onClose={() => setBalanceModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -149,6 +149,15 @@
   line-height: 1.25;
 }
 
+.inventory-card-reserved {
+  border-color: rgba(124, 92, 255, 0.85);
+}
+
+.inventory-card-footer .inventory-status-reserved {
+  color: #b7aaff;
+  font-weight: 700;
+}
+
 .inventory-card-footer button {
   min-width: 0;
   width: 100%;

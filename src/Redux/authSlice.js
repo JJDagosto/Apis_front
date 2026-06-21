@@ -103,12 +103,41 @@ export const updateCurrentUser = createAsyncThunk(
   },
 )
 
+export const agregarSaldo = createAsyncThunk(
+  "auth/agregarSaldo",
+  async ({ amountArs, card }, { getState }) => {
+    const token = getState().auth.token
+    const paymentResponse = await apiRequest(
+      "/payments/bricks/balance/process-test-card",
+      {
+        method: "POST",
+        headers: { "X-Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ amountArs, ...card }),
+      },
+      token,
+    )
+
+    if (paymentResponse.data?.status !== "approved") {
+      throw new Error(
+        paymentResponse.data?.statusDetail || "Mercado Pago no aprobó la recarga.",
+      )
+    }
+
+    const userResponse = await apiRequest("/api/v1/users/me", {}, token)
+    return {
+      payment: paymentResponse.data,
+      user: userResponse.data,
+    }
+  },
+)
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
     token: null,
     currentUser: null,
     loading: false,
+    balanceLoading: false,
     error: null,
   },
   reducers: {
@@ -116,10 +145,16 @@ const authSlice = createSlice({
       state.token = null
       state.currentUser = null
       state.loading = false
+      state.balanceLoading = false
       state.error = null
     },
     clearAuthError: (state) => {
       state.error = null
+    },
+    setCurrentUserBalance: (state, action) => {
+      if (state.currentUser) {
+        state.currentUser.saldo = action.payload
+      }
     },
   },
   extraReducers: (builder) => {
@@ -173,9 +208,21 @@ const authSlice = createSlice({
         state.loading = false
         state.error = action.error.message
       })
+      .addCase(agregarSaldo.pending, (state) => {
+        state.balanceLoading = true
+        state.error = null
+      })
+      .addCase(agregarSaldo.fulfilled, (state, action) => {
+        state.balanceLoading = false
+        state.currentUser = action.payload.user
+      })
+      .addCase(agregarSaldo.rejected, (state, action) => {
+        state.balanceLoading = false
+        state.error = action.error.message
+      })
   },
 })
 
-export const { logout, clearAuthError } = authSlice.actions
+export const { logout, clearAuthError, setCurrentUserBalance } = authSlice.actions
 
 export default authSlice.reducer

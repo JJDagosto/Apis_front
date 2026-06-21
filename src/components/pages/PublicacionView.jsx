@@ -9,9 +9,11 @@ import { despublicarPublicacion, editarPublicacion } from "../../Redux/publicaci
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
 import { getPositivePriceError } from "../../utils/validations.jsx"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import "../../pages/Publicacion.css"
 
 function Publicacion() {
+  const { formatPrice } = useCurrencyFormatter()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { skinId } = useParams()
@@ -202,9 +204,9 @@ function Publicacion() {
 
           <div className="publication-price-block">
             {tieneDescuento && (
-              <span className="publication-old-price">${skin.price.toFixed(2)}</span>
+              <span className="publication-old-price">{formatPrice(skin.price)}</span>
             )}
-            <strong>${precioFinal.toFixed(2)}</strong>
+            <strong>{formatPrice(precioFinal)}</strong>
             {tieneDescuento && (
               <span className="publication-discount">
                 {Math.round(skin.discount * 100)}% OFF

@@ -29,8 +29,11 @@ import AdminDevTools from './pages/AdminDevTools'
 import { resetAppSession } from './Redux/appSlice'
 import { logout } from './Redux/authSlice'
 import { fetchCarrito } from './Redux/carritoSlice'
-import { fetchCatalogo, setCatalogSearchTerm } from './Redux/catalogoSlice'
-import { fetchMisPublicaciones } from './Redux/publicacionesSlice'
+import { fetchCatalogo } from './Redux/catalogoSlice'
+import {
+  fetchMisPublicaciones,
+  fetchSalesNotifications,
+} from './Redux/publicacionesSlice'
 
 function ResetPasswordRoute() {
   const navigate = useNavigate()
@@ -73,17 +76,13 @@ function App() {
 
     dispatch(fetchCarrito())
     dispatch(fetchMisPublicaciones())
+    dispatch(fetchSalesNotifications())
   }, [currentUser, dispatch])
 
   const handleLogout = () => {
     dispatch(logout())
     dispatch(resetAppSession())
     navigate('/')
-  }
-
-  const handleSearch = (term) => {
-    dispatch(setCatalogSearchTerm(term))
-    navigate('/catalogo')
   }
 
   return (
@@ -93,7 +92,6 @@ function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
         cartCount={cartItems.length}
-        onSearch={handleSearch}
       />
 
       <Routes>

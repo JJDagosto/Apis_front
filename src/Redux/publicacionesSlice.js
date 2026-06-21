@@ -5,6 +5,8 @@ import { publicarInventarioItem } from "./inventarioSlice"
 
 const getToken = (getState) => getState().auth.token
 
+const PENDING_PAYMENT_STATUSES = new Set(["PENDING_PAYMENT", "IN_PROCESS"])
+
 export const fetchMisPublicaciones = createAsyncThunk(
   "publicaciones/fetchMisPublicaciones",
   async (_, { getState }) => {
@@ -13,7 +15,8 @@ export const fetchMisPublicaciones = createAsyncThunk(
   },
   {
     condition: (options, { getState }) =>
-      options?.force || getState().publicaciones.status === "idle",
+      getState().publicaciones.status !== "loading" &&
+      (options?.force || ["idle", "failed"].includes(getState().publicaciones.status)),
   },
 )
 
@@ -32,23 +35,45 @@ export const fetchDetallePublicaciones = createAsyncThunk(
       // La sincronización ayuda, pero no debe bloquear la pantalla.
     }
 
-    const [historialResponse, comprasResponse] = await Promise.all([
-      apiRequest("/skins/mis-skins/historial", {}, token),
-      apiRequest("/order/me", {}, token),
-    ])
+    const comprasResponse = await apiRequest("/order/me", {}, token)
+
+    const purchaseOrders = (comprasResponse.data ?? []).filter(
+      (order) => order.operationType === "PURCHASE",
+    )
 
     return {
-      historial: historialResponse.data ?? [],
-      compras: (comprasResponse.data ?? []).filter(
-        (order) =>
-          order.operationType === "PURCHASE" &&
-          order.tradeStatus === "COMPLETED",
+      compras: purchaseOrders.filter((order) => order.paymentStatus === "PAID"),
+      pagosPendientes: purchaseOrders.filter((order) =>
+        PENDING_PAYMENT_STATUSES.has(order.paymentStatus),
       ),
     }
   },
   {
-    condition: (_, { getState }) =>
-      getState().publicaciones.detailStatus === "idle",
+    condition: (options, { getState }) =>
+      getState().publicaciones.detailStatus !== "loading" &&
+      (options?.force || ["idle", "failed"].includes(getState().publicaciones.detailStatus)),
+  },
+)
+
+export const fetchSalesNotifications = createAsyncThunk(
+  "publicaciones/fetchSalesNotifications",
+  async (_, { getState }) => {
+    const token = getToken(getState)
+    const [historyResponse, salesResponse] = await Promise.all([
+      apiRequest("/skins/mis-skins/historial", {}, token),
+      apiRequest("/order/sales", {}, token),
+    ])
+    return {
+      historial: historyResponse.data ?? [],
+      ventas: salesResponse.data ?? [],
+    }
+  },
+  {
+    condition: (options, { getState }) => {
+      const status = getState().publicaciones.salesNotificationsStatus
+      return status !== "loading" &&
+        (options?.force || ["idle", "failed"].includes(status))
+    },
   },
 )
 
@@ -110,12 +135,23 @@ const publicacionesSlice = createSlice({
     items: [],
     historial: [],
     compras: [],
+    pagosPendientes: [],
+    salesNotifications: [],
+    readSaleNotificationIds: [],
+    notificationsBaselineReady: false,
     status: "idle",
     detailStatus: "idle",
+    salesNotificationsStatus: "idle",
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    markSalesNotificationsRead: (state) => {
+      state.readSaleNotificationIds = state.salesNotifications.map(
+        (sale) => `${sale.orderId}-${sale.skinId}`,
+      )
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchMisPublicaciones.pending, (state) => {
@@ -141,13 +177,30 @@ const publicacionesSlice = createSlice({
       .addCase(fetchDetallePublicaciones.fulfilled, (state, action) => {
         state.detailStatus = "succeeded"
         state.loading = false
-        state.historial = action.payload.historial
         state.compras = action.payload.compras
+        state.pagosPendientes = action.payload.pagosPendientes
       })
       .addCase(fetchDetallePublicaciones.rejected, (state, action) => {
         state.detailStatus = "failed"
         state.loading = false
         state.error = action.error.message
+      })
+      .addCase(fetchSalesNotifications.pending, (state) => {
+        state.salesNotificationsStatus = "loading"
+      })
+      .addCase(fetchSalesNotifications.fulfilled, (state, action) => {
+        state.salesNotificationsStatus = "succeeded"
+        state.historial = action.payload.historial
+        state.salesNotifications = action.payload.ventas
+        if (!state.notificationsBaselineReady) {
+          state.readSaleNotificationIds = action.payload.ventas.map(
+            (sale) => [sale.orderId, sale.skinId].join("-"),
+          )
+          state.notificationsBaselineReady = true
+        }
+      })
+      .addCase(fetchSalesNotifications.rejected, (state) => {
+        state.salesNotificationsStatus = "failed"
       })
       .addCase(editarPublicacion.fulfilled, (state, action) => {
         updateSkin(state.items, action.payload.id, action.payload)
@@ -170,12 +223,19 @@ const publicacionesSlice = createSlice({
         state.items = []
         state.historial = []
         state.compras = []
+        state.pagosPendientes = []
+        state.salesNotifications = []
+        state.readSaleNotificationIds = []
+        state.notificationsBaselineReady = false
         state.status = "idle"
         state.detailStatus = "idle"
+        state.salesNotificationsStatus = "idle"
         state.loading = false
         state.error = null
       })
   },
 })
+
+export const { markSalesNotificationsRead } = publicacionesSlice.actions
 
 export default publicacionesSlice.reducer

@@ -1,5 +1,15 @@
-import { FaSteam, FaSyncAlt } from "react-icons/fa"
+import { FaPaperPlane, FaSteam, FaSyncAlt } from "react-icons/fa"
+import { useDispatch, useSelector } from "react-redux"
+import { setOfferedSearchTerm } from "../../Redux/intercambioSlice"
 import ExchangeItemCard from "./ExchangeItemCard.jsx"
+import ExchangePanelSearch from "./ExchangePanelSearch.jsx"
+
+const getUnavailableLabel = (item) => {
+  if (item.publicado) return "Ya publicado"
+  if (item.pending) return "En otra operaci\u00f3n"
+  if (item.tradable === false) return "No intercambiable"
+  return null
+}
 
 function ExchangeInventoryPanel({
   currentUser,
@@ -12,19 +22,27 @@ function ExchangeInventoryPanel({
   onSync,
   onToggle,
 }) {
-  const tradableItems = items.filter((item) => (
-    item.catalogo &&
-    !item.publicado &&
-    !item.pending &&
-    item.tradable !== false
+  const dispatch = useDispatch()
+  const searchTerm = useSelector((state) => state.intercambio.offeredSearchTerm)
+  const inventoryItems = items.filter((item) => item.catalogo)
+  const normalizedSearch = searchTerm.trim().toLowerCase()
+  const visibleItems = inventoryItems.filter((item) => (
+    !normalizedSearch || [
+      item.name,
+      item.catalogo?.weaponName,
+      item.catalogo?.exteriorName,
+    ].some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch))
   ))
 
   return (
-    <section className="exchange-panel">
+    <section className="exchange-panel exchange-panel-offer">
       <header className="exchange-panel-header">
-        <div>
-          <span>Tu oferta</span>
-          <h2>Inventario</h2>
+        <div className="exchange-panel-title">
+          <span className="exchange-header-icon"><FaPaperPlane /></span>
+          <div>
+            <span className="exchange-panel-kicker">Enviás</span>
+            <h2>Tu inventario</h2>
+          </div>
         </div>
         {currentUser && (
           <button type="button" onClick={onSync} disabled={syncing}>
@@ -32,6 +50,14 @@ function ExchangeInventoryPanel({
           </button>
         )}
       </header>
+
+      {currentUser && (
+        <ExchangePanelSearch
+          value={searchTerm}
+          onChange={(value) => dispatch(setOfferedSearchTerm(value))}
+          label="Buscar en las skins que enviás"
+        />
+      )}
 
       {!currentUser && (
         <div className="exchange-empty">
@@ -50,28 +76,34 @@ function ExchangeInventoryPanel({
         <p className="exchange-message exchange-error">{error}</p>
       )}
 
-      {currentUser && !loading && !error && tradableItems.length === 0 && (
+      {currentUser && !loading && !error && visibleItems.length === 0 && (
         <div className="exchange-empty">
           <FaSteam />
-          <h3>No hay skins disponibles</h3>
-          <p>Sincronizá tu inventario o revisá que tengas skins tradeables.</p>
+          <h3>{normalizedSearch ? "No encontramos coincidencias" : "No hay skins disponibles"}</h3>
+          <p>{normalizedSearch ? "Probá con otro nombre, arma o estado." : "Sincronizá tu inventario o revisá que tengas skins intercambiables."}</p>
         </div>
       )}
 
-      {currentUser && !loading && !error && tradableItems.length > 0 && (
-        <div className="exchange-item-list">
-          {tradableItems.map((item) => (
-            <ExchangeItemCard
-              key={item.id}
-              image={item.iconUrl || item.catalogo?.imageUrl}
-              title={item.name}
-              weapon={item.catalogo?.weaponName}
-              exterior={item.catalogo?.exteriorName}
-              status="Inventario"
-              selected={selectedIds.includes(String(item.id))}
-              onSelect={() => onToggle(item.id)}
-            />
-          ))}
+      {currentUser && !loading && !error && visibleItems.length > 0 && (
+        <div className="exchange-item-grid">
+          {visibleItems.map((item) => {
+            const unavailableLabel = getUnavailableLabel(item)
+            return (
+              <ExchangeItemCard
+                key={item.id}
+                image={item.iconUrl || item.catalogo?.imageUrl}
+                title={item.name}
+                weapon={item.catalogo?.weaponName}
+                exterior={item.catalogo?.exteriorName}
+                price={item.estimatedPrice}
+                status="Inventario"
+                selected={selectedIds.includes(String(item.id))}
+                disabled={Boolean(unavailableLabel)}
+                unavailableLabel={unavailableLabel}
+                onSelect={() => onToggle(item.id)}
+              />
+            )
+          })}
         </div>
       )}
     </section>

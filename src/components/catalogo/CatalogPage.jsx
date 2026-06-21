@@ -7,6 +7,7 @@ import CatalogFilters from "../CatalogFilters.jsx"
 import CatalogModeTabs from "./CatalogModeTabs.jsx"
 import CatalogGrid from "./CatalogGrid.jsx"
 import CatalogSearchNotice from "./CatalogSearchNotice.jsx"
+import CatalogSearchBar from "./CatalogSearchBar.jsx"
 import CatalogToolbar from "./CatalogToolbar.jsx"
 import { useCatalogCartActions } from "../../hooks/useCatalogCartActions"
 
@@ -36,6 +37,7 @@ function CatalogPage() {
           </div>
 
           <div className="col-sm-9">
+            <CatalogSearchBar />
             <CatalogToolbar />
             <CatalogSearchNotice />
             <CatalogGrid

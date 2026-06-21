@@ -1,5 +1,6 @@
-import { FaCheck, FaPlus } from "react-icons/fa"
+import { FaBan, FaCheck, FaPlus } from "react-icons/fa"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 
 function ExchangeItemCard({
   image,
@@ -10,17 +11,20 @@ function ExchangeItemCard({
   status,
   selected,
   disabled = false,
+  unavailableLabel,
   onSelect,
 }) {
+  const { formatPrice } = useCurrencyFormatter()
+
   return (
     <button
       type="button"
-      className={`exchange-item-card ${selected ? "selected" : ""}`}
+      className={`exchange-item-card ${selected ? "selected" : ""} ${disabled ? "unavailable" : ""}`}
       disabled={disabled}
       onClick={onSelect}
     >
       <span className="exchange-item-check">
-        {selected ? <FaCheck /> : <FaPlus />}
+        {disabled ? <FaBan /> : selected ? <FaCheck /> : <FaPlus />}
       </span>
       <span className="exchange-item-image">
         {image && <img src={image} alt={title} />}
@@ -32,8 +36,11 @@ function ExchangeItemCard({
       </span>
       {price != null && (
         <span className="exchange-item-price">
-          ${Number(price).toFixed(2)}
+          {formatPrice(price)}
         </span>
+      )}
+      {disabled && unavailableLabel && (
+        <span className="exchange-item-unavailable">{unavailableLabel}</span>
       )}
     </button>
   )

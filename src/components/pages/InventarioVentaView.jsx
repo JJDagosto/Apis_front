@@ -7,6 +7,10 @@ import {
   publicarInventarioItem,
   sincronizarInventario,
 } from "../../Redux/inventarioSlice"
+import {
+  fetchMisPublicaciones,
+  fetchSalesNotifications,
+} from "../../Redux/publicacionesSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
@@ -23,6 +27,8 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const openPerfil = goToPerfil ?? (() => navigate("/perfil"))
   const currentUser = useSelector((state) => state.auth.currentUser)
   const myPublications = useSelector((state) => state.publicaciones.items)
+  const publicationHistory = useSelector((state) => state.publicaciones.historial)
+  const sales = useSelector((state) => state.publicaciones.salesNotifications)
   const {
     items,
     status,
@@ -39,7 +45,9 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
 
   useEffect(() => {
     if (currentUser) {
-      dispatch(fetchInventario())
+      dispatch(fetchInventario({ force: true }))
+      dispatch(fetchMisPublicaciones({ force: true }))
+      dispatch(fetchSalesNotifications({ force: true }))
     }
   }, [currentUser, dispatch])
 
@@ -131,7 +139,20 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
     }
   }
 
-  const getItemStatus = (item) => {
+  const getItemStatus = (item, publication, sale) => {
+    if (sale) {
+      if (sale.tradeStatus === "COMPLETED") return "Vendida · Intercambio completado"
+      if (sale.tradeStatus === "BOT_SENT") return "Reservada · Oferta enviada"
+      if (sale.tradeStatus === "PREPARING_TRADE") return "Reservada · Preparando intercambio"
+      if (sale.tradeStatus === "WAITING_UNLOCK") return "Reservada · Esperando desbloqueo"
+      return "Reservada · Pago confirmado"
+    }
+    if (publication?.estadoPublicacion === "RESERVADA") {
+      return "Reservada · Esperando pago"
+    }
+    if (publication?.estadoPublicacion === "VENDIDA") {
+      return "Vendida · Intercambio completado"
+    }
     if (item.publicado) return "Ya publicado"
     if (item.pending) return "Pendiente"
     if (item.tradable === false) return "No tradeable"
@@ -145,18 +166,17 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const getPublicationForItem = (item) => {
     if (!item.publicado) return null
 
-    return myPublications.find((publication) => (
-      publication.active !== false &&
-      item.catalogo?.id &&
-      publication.catalogo?.id === item.catalogo.id
-    )) ?? myPublications.find((publication) => (
-      publication.active !== false &&
-      publication.name === item.name
-    ))
+    const publications = [...myPublications, ...publicationHistory]
+    return publications.find((publication) => (
+      publication.inventarioItem?.id === item.id ||
+      (publication.steamAssetId && publication.steamAssetId === item.assetId)
+    )) ?? publications.find((publication) => (
+      item.catalogo?.id && publication.catalogo?.id === item.catalogo.id
+    )) ?? publications.find((publication) => publication.name === item.name)
   }
 
-  const handlePublishedItem = (item) => {
-    const publication = getPublicationForItem(item)
+  const handlePublishedItem = (item, knownPublication) => {
+    const publication = knownPublication ?? getPublicationForItem(item)
 
     if (!publication) {
       setError("No pude encontrar la publicación asociada. Probá refrescar la página o entrar desde Mis publicaciones.")
@@ -218,8 +238,16 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
 
       {!loading && cs2Items.length > 0 && (
         <section className="inventory-grid">
-          {cs2Items.map((item) => (
-            <article className="inventory-card" key={item.id}>
+          {cs2Items.map((item) => {
+            const publication = getPublicationForItem(item)
+            const sale = publication
+              ? sales.find((itemSale) => itemSale.skinId === publication.id)
+              : null
+            const reserved = publication?.estadoPublicacion === "RESERVADA"
+            const sold = publication?.estadoPublicacion === "VENDIDA"
+
+            return (
+            <article className={`inventory-card ${reserved ? "inventory-card-reserved" : ""}`} key={item.id}>
               <div className="inventory-image-wrap">
                 <img src={item.iconUrl || item.catalogo?.imageUrl} alt={item.name} />
               </div>
@@ -234,19 +262,22 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
               </div>
 
               <div className="inventory-card-footer">
-                <span>{getItemStatus(item)}</span>
+                <span className={reserved ? "inventory-status-reserved" : ""}>
+                  {getItemStatus(item, publication, sale)}
+                </span>
                 <button
                   type="button"
                   className={item.publicado ? "inventory-manage" : ""}
                   disabled={!item.publicado && (!canPublish(item) || !canSellFromProfile)}
-                  onClick={() => item.publicado ? handlePublishedItem(item) : openPublishModal(item)}
+                  onClick={() => item.publicado ? handlePublishedItem(item, publication) : openPublishModal(item)}
                 >
                   {item.publicado ? <FaPen /> : <FaTag />}
-                  {item.publicado ? "Administrar" : "Publicar"}
+                  {reserved || sold ? "Ver estado" : item.publicado ? "Administrar" : "Publicar"}
                 </button>
               </div>
             </article>
-          ))}
+            )
+          })}
         </section>
       )}
 

@@ -9,7 +9,7 @@ function CatalogModeTabs() {
         to="/catalogo"
         end
       >
-        <FaShoppingBag /> Skins
+        <FaShoppingBag /> Market
       </NavLink>
       <NavLink
         className={({ isActive }) => `catalog-mode-tab ${isActive ? "active" : ""}`}

@@ -5,6 +5,8 @@ import { loginWithSteamToken } from "../../Redux/authSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import "../../pages/Login.css"
 
+const processedSteamCallbacks = new Set()
+
 function SteamCallbackView() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -14,6 +16,10 @@ function SteamCallbackView() {
   useEffect(() => {
     const token = searchParams.get("token")
     const error = searchParams.get("error")
+    const callbackKey = token ? `token:${token}` : `error:${error ?? "missing-token"}`
+
+    if (processedSteamCallbacks.has(callbackKey)) return
+    processedSteamCallbacks.add(callbackKey)
 
     if (error) {
       setMessage(error)
@@ -34,6 +40,7 @@ function SteamCallbackView() {
         dispatch(mostrarNotificacion("Sesión iniciada con Steam."))
         navigate(result.user?.tradeUrl ? "/catalogo" : "/perfil", { replace: true })
       } catch (loginError) {
+        processedSteamCallbacks.delete(callbackKey)
         setMessage(loginError.message)
         dispatch(mostrarNotificacion(loginError.message, "error"))
       }

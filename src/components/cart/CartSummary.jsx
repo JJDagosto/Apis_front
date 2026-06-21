@@ -1,4 +1,4 @@
-import { formatCartPrice } from "../../utils/cartTotals"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 
 function CartSummary({
   cupon,
@@ -9,6 +9,7 @@ function CartSummary({
   onCheckout,
   onCompleteProfile,
 }) {
+  const { formatPrice } = useCurrencyFormatter()
   const couponCode = cupon.trim()
   const hasCoupon = couponCode.length > 0
   const hasSkinDiscount = totals.skinDiscountTotal > 0
@@ -33,12 +34,12 @@ function CartSummary({
       </div>
       <div className="cart-summary-row">
         <span>Subtotal</span>
-        <strong>{formatCartPrice(totals.subtotal)}</strong>
+        <strong>{formatPrice(totals.subtotal)}</strong>
       </div>
       {hasSkinDiscount && (
         <div className="cart-summary-row cart-summary-discount">
           <span>Descuentos de skins</span>
-          <strong>-{formatCartPrice(totals.skinDiscountTotal)}</strong>
+          <strong>-{formatPrice(totals.skinDiscountTotal)}</strong>
         </div>
       )}
       {hasCoupon && (
@@ -49,7 +50,7 @@ function CartSummary({
       )}
       <div className="cart-summary-row cart-summary-total">
         <span>Total estimado</span>
-        <strong>{formatCartPrice(totals.totalBeforeCoupon)}</strong>
+        <strong>{formatPrice(totals.totalBeforeCoupon)}</strong>
       </div>
 
       <label className="cart-cupon">

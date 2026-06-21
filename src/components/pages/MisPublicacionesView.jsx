@@ -8,9 +8,13 @@ import {
   editarPublicacion,
   fetchDetallePublicaciones,
   fetchMisPublicaciones,
+  fetchSalesNotifications,
 } from "../../Redux/publicacionesSlice"
+import { fetchMisOperaciones } from "../../Redux/intercambioSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
+import ExchangeOperationsSection from "../publicaciones/ExchangeOperationsSection.jsx"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import {
   getPositivePriceError,
   getPublicationAvailabilityError,
@@ -39,6 +43,20 @@ const getEstadoClass = (estado) => {
   return "badge-default"
 }
 
+const getTradeStatusLabel = (tradeStatus) => {
+  const labels = {
+    WAITING_PAYMENT: "Pago confirmado",
+    WAITING_UNLOCK: "Esperando desbloqueo de Steam",
+    PREPARING_TRADE: "Preparando intercambio",
+    BOT_SENT: "Oferta de intercambio enviada",
+    COMPLETED: "Intercambio completado",
+    CANCELLED: "Intercambio cancelado",
+    FAILED: "Intercambio con error",
+    EXPIRED: "Oferta de intercambio vencida",
+  }
+  return labels[tradeStatus] ?? "Compra confirmada"
+}
+
 function EstadoBadge({ estado }) {
   return (
     <span className={`pub-badge ${getEstadoClass(estado)}`}>
@@ -48,6 +66,7 @@ function EstadoBadge({ estado }) {
 }
 
 function MisPublicaciones({ goToLogin }) {
+  const { formatPrice } = useCurrencyFormatter()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const openLogin = goToLogin ?? (() => navigate("/login"))
@@ -56,10 +75,20 @@ function MisPublicaciones({ goToLogin }) {
     items: publicaciones,
     historial,
     compras,
+    pagosPendientes,
+    salesNotifications,
     status,
     detailStatus,
     error: reduxError,
   } = useSelector((state) => state.publicaciones)
+  const {
+    operations,
+    operationsStatus,
+    operationsError,
+  } = useSelector((state) => state.intercambio)
+  const intercambios = operations.filter(
+    (operation) => operation.operationType === "EXCHANGE",
+  )
   const loading = status === "loading" || detailStatus === "loading"
   const [error, setError] = useState("")
   const [actionId, setActionId] = useState(null)
@@ -71,8 +100,10 @@ function MisPublicaciones({ goToLogin }) {
 
   useEffect(() => {
     if (currentUser) {
-      dispatch(fetchMisPublicaciones())
-      dispatch(fetchDetallePublicaciones())
+      dispatch(fetchMisPublicaciones({ force: true }))
+      dispatch(fetchDetallePublicaciones({ force: true }))
+      dispatch(fetchSalesNotifications({ force: true }))
+      dispatch(fetchMisOperaciones())
     }
   }, [currentUser, dispatch])
 
@@ -213,19 +244,35 @@ function MisPublicaciones({ goToLogin }) {
     )
   }
 
-  const renderCompraCard = (orden) => {
+  const renderCompraCard = (orden, pagoPendiente = false) => {
     return orden.orderDetailResponses?.map((item) => (
-      <article className="pub-card" key={`${orden.id}-${item.skinId}`}>
+      <article
+        className={`pub-card${pagoPendiente ? " pub-card-payment-pending" : ""}`}
+        key={`${orden.id}-${item.skinId}`}
+      >
         <div className="pub-image-wrap">
           {item.imageUrl && <img src={item.imageUrl} alt={item.skinName} />}
-          <span className="pub-badge badge-comprada">Comprada</span>
+          <span className={`pub-badge ${pagoPendiente ? "badge-pago-pendiente" : "badge-comprada"}`}>
+            {pagoPendiente ? "Pago pendiente" : "Comprada"}
+          </span>
         </div>
         <div className="pub-card-body">
           <h2>{limpiarNombreSkin(item.skinName ?? "")}</h2>
-          <strong>${(item.unitPrice ?? 0).toFixed(2)}</strong>
+          <strong>{formatPrice(item.unitPrice ?? 0)}</strong>
           <p className="pub-exterior" style={{ marginTop: 4, fontSize: "0.8rem", color: "#b9b9c6" }}>
             Orden #{orden.id}
           </p>
+          <div className="pub-trade-state">
+            <span>{pagoPendiente ? "Estado del pago" : "Estado del intercambio"}</span>
+            <strong>
+              {pagoPendiente
+                ? "Mercado Pago está revisando la operación"
+                : getTradeStatusLabel(orden.tradeStatus)}
+            </strong>
+            {pagoPendiente && (
+              <small>La publicación permanece reservada hasta recibir la confirmación.</small>
+            )}
+          </div>
         </div>
       </article>
     ))
@@ -235,6 +282,7 @@ function MisPublicaciones({ goToLogin }) {
     const precioFinal = skin.finalPrice ?? skin.price
     const tieneDescuento = (skin.discount ?? 0) > 0
     const estado = getEstadoPublicacion(skin)
+    const sale = salesNotifications.find((item) => item.skinId === skin.id)
 
     return (
       <article className="pub-card" key={skin.id}>
@@ -250,10 +298,24 @@ function MisPublicaciones({ goToLogin }) {
 
           <div className="pub-price-row">
             {tieneDescuento && (
-              <span className="pub-old-price">${skin.price.toFixed(2)}</span>
+              <span className="pub-old-price">{formatPrice(skin.price)}</span>
             )}
-            <strong>${precioFinal.toFixed(2)}</strong>
+            <strong>{formatPrice(precioFinal)}</strong>
           </div>
+
+          {["RESERVADA", "VENDIDA"].includes(estado) && (
+            <div className="pub-trade-state">
+              <span>Estado del intercambio</span>
+              <strong>
+                {sale
+                  ? getTradeStatusLabel(sale.tradeStatus)
+                  : estado === "RESERVADA"
+                    ? "Esperando confirmación del pago"
+                    : "Intercambio completado"}
+              </strong>
+              {sale && <small>Orden #{sale.orderId}</small>}
+            </div>
+          )}
         </div>
 
         {conAcciones && renderAcciones(skin)}
@@ -269,6 +331,7 @@ function MisPublicaciones({ goToLogin }) {
       </header>
 
       {(error || reduxError) && <p className="pub-error">{error || reduxError}</p>}
+      {operationsError && <p className="pub-error">{operationsError}</p>}
       {loading && <p className="pub-message">Cargando publicaciones...</p>}
 
       {!loading && (
@@ -296,6 +359,22 @@ function MisPublicaciones({ goToLogin }) {
           </section>
 
           <section className="pub-section">
+            <h2>
+              Pagos pendientes ({pagosPendientes.reduce(
+                (acc, order) => acc + (order.orderDetailResponses?.length ?? 0),
+                0,
+              )})
+            </h2>
+            {pagosPendientes.length === 0 ? (
+              <p className="pub-message">No tenés pagos pendientes.</p>
+            ) : (
+              <div className="pub-grid">
+                {pagosPendientes.map((orden) => renderCompraCard(orden, true))}
+              </div>
+            )}
+          </section>
+
+          <section className="pub-section">
             <h2>Mis compras ({compras.reduce((acc, o) => acc + (o.orderDetailResponses?.length ?? 0), 0)})</h2>
             {compras.length === 0 ? (
               <p className="pub-message">Todavía no compraste ninguna skin.</p>
@@ -305,6 +384,12 @@ function MisPublicaciones({ goToLogin }) {
               </div>
             )}
           </section>
+
+          <ExchangeOperationsSection
+            operations={intercambios}
+            loading={operationsStatus === "loading"}
+            onRefresh={() => dispatch(fetchMisOperaciones({ force: true }))}
+          />
 
           <section className="pub-section">
             <h2>Historial ({historial.length})</h2>

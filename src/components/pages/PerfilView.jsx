@@ -30,7 +30,7 @@ function Perfil({ goToLogin }) {
     if (!currentUser) return
 
     setForm({
-      username: currentUser.username ?? "",
+      username: currentUser.steamUsername ?? currentUser.username ?? "",
       email: currentUser.email ?? "",
       firstName: currentUser.firstName ?? "",
       lastName: currentUser.lastName ?? "",
@@ -80,7 +80,9 @@ function Perfil({ goToLogin }) {
 
     try {
       const payload = {
-        username: form.username.trim(),
+        username: currentUser.steamId64
+          ? currentUser.username
+          : form.username.trim(),
         email: form.email.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -110,6 +112,17 @@ function Perfil({ goToLogin }) {
         <div className="profile-header">
           <h1>Mi cuenta</h1>
           <p>Gestioná tus datos y la conexión con Steam.</p>
+          {currentUser.steamId64 && (
+            <div className="steam-profile-summary">
+              {currentUser.steamAvatarUrl && (
+                <img src={currentUser.steamAvatarUrl} alt="Avatar de Steam" />
+              )}
+              <div>
+                <span>Cuenta de Steam</span>
+                <strong>{currentUser.steamUsername || currentUser.username}</strong>
+              </div>
+            </div>
+          )}
         </div>
 
         <form className="profile-form" onSubmit={handleSubmit}>
@@ -120,6 +133,7 @@ function Perfil({ goToLogin }) {
                 type="text"
                 value={form.username}
                 onChange={(event) => updateField("username", event.target.value)}
+                disabled={Boolean(currentUser.steamId64)}
                 required
               />
             </label>
