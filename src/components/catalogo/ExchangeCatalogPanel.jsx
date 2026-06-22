@@ -56,7 +56,7 @@ function ExchangeCatalogPanel({
               title={skin.name}
               weapon={skin.catalogo?.weaponName}
               exterior={skin.catalogo?.exteriorName ?? skin.exterior}
-              price={skin.finalPrice ?? skin.price}
+              price={skin.finalPrice ?? skin.precioFinal ?? skin.price}
               selected={selectedIds.includes(String(skin.id))}
               onSelect={() => onToggle(skin.id)}
             />

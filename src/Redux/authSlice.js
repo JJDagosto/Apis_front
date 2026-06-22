@@ -103,31 +103,63 @@ export const updateCurrentUser = createAsyncThunk(
   },
 )
 
-export const agregarSaldo = createAsyncThunk(
-  "auth/agregarSaldo",
-  async ({ amountArs, card }, { getState }) => {
-    const token = getState().auth.token
-    const paymentResponse = await apiRequest(
-      "/payments/bricks/balance/process-test-card",
-      {
-        method: "POST",
-        headers: { "X-Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ amountArs, ...card }),
-      },
-      token,
+export const prepararRecargaSaldo = createAsyncThunk(
+  "auth/prepararRecargaSaldo",
+  async ({ amountArs }, { getState }) => {
+    const state = getState().auth
+    const existingAmount = Number(state.balanceCheckout?.order?.totalFinal)
+    const hasCheckoutUrl = Boolean(
+      state.balanceCheckout?.checkoutUrl ||
+      state.balanceCheckout?.sandboxInitPoint ||
+      state.balanceCheckout?.initPoint,
     )
 
-    if (paymentResponse.data?.status !== "approved") {
-      throw new Error(
-        paymentResponse.data?.statusDetail || "Mercado Pago no aprobó la recarga.",
-      )
+    if (hasCheckoutUrl && Math.abs(existingAmount - Number(amountArs)) < 0.01) {
+      return state.balanceCheckout
     }
 
-    const userResponse = await apiRequest("/api/v1/users/me", {}, token)
-    return {
-      payment: paymentResponse.data,
-      user: userResponse.data,
+    const response = await apiRequest(
+      "/payments/bricks/balance/preferences",
+      {
+        method: "POST",
+        body: JSON.stringify({ amountArs }),
+      },
+      state.token,
+    )
+    return response.data
+  },
+  {
+    condition: (_, { getState }) => !getState().auth.balanceLoading,
+  },
+)
+
+export const sincronizarRecargaSaldo = createAsyncThunk(
+  "auth/sincronizarRecargaSaldo",
+  async (_, { getState }) => {
+    const state = getState().auth
+    const orderId = state.balanceCheckout?.order?.id
+    if (!orderId) {
+      throw new Error("No hay una recarga para verificar.")
     }
+
+    const paymentResponse = await apiRequest(
+      `/payments/bricks/orders/${orderId}/sync`,
+      { method: "POST" },
+      state.token,
+    )
+    const payment = paymentResponse.data
+    const approved = payment?.status === "approved" || payment?.order?.paymentStatus === "PAID"
+    const userResponse = approved
+      ? await apiRequest("/api/v1/users/me", {}, state.token)
+      : null
+
+    return {
+      payment,
+      user: userResponse?.data ?? null,
+    }
+  },
+  {
+    condition: (_, { getState }) => !getState().auth.balanceSyncing,
   },
 )
 
@@ -138,6 +170,10 @@ const authSlice = createSlice({
     currentUser: null,
     loading: false,
     balanceLoading: false,
+    balanceSyncing: false,
+    balanceCheckout: null,
+    balancePayment: null,
+    balanceError: null,
     error: null,
   },
   reducers: {
@@ -146,6 +182,10 @@ const authSlice = createSlice({
       state.currentUser = null
       state.loading = false
       state.balanceLoading = false
+      state.balanceSyncing = false
+      state.balanceCheckout = null
+      state.balancePayment = null
+      state.balanceError = null
       state.error = null
     },
     clearAuthError: (state) => {
@@ -155,6 +195,13 @@ const authSlice = createSlice({
       if (state.currentUser) {
         state.currentUser.saldo = action.payload
       }
+    },
+    clearBalanceCheckout: (state) => {
+      state.balanceLoading = false
+      state.balanceSyncing = false
+      state.balanceCheckout = null
+      state.balancePayment = null
+      state.balanceError = null
     },
   },
   extraReducers: (builder) => {
@@ -208,21 +255,44 @@ const authSlice = createSlice({
         state.loading = false
         state.error = action.error.message
       })
-      .addCase(agregarSaldo.pending, (state) => {
+      .addCase(prepararRecargaSaldo.pending, (state) => {
         state.balanceLoading = true
-        state.error = null
+        state.balanceError = null
       })
-      .addCase(agregarSaldo.fulfilled, (state, action) => {
+      .addCase(prepararRecargaSaldo.fulfilled, (state, action) => {
         state.balanceLoading = false
-        state.currentUser = action.payload.user
+        state.balanceCheckout = action.payload
       })
-      .addCase(agregarSaldo.rejected, (state, action) => {
+      .addCase(prepararRecargaSaldo.rejected, (state, action) => {
         state.balanceLoading = false
-        state.error = action.error.message
+        state.balanceError = action.error.message
+      })
+      .addCase(sincronizarRecargaSaldo.pending, (state) => {
+        state.balanceSyncing = true
+        state.balanceError = null
+      })
+      .addCase(sincronizarRecargaSaldo.fulfilled, (state, action) => {
+        state.balanceSyncing = false
+        state.balancePayment = action.payload.payment
+        if (state.balanceCheckout && action.payload.payment?.order) {
+          state.balanceCheckout.order = action.payload.payment.order
+        }
+        if (action.payload.user) {
+          state.currentUser = action.payload.user
+        }
+      })
+      .addCase(sincronizarRecargaSaldo.rejected, (state, action) => {
+        state.balanceSyncing = false
+        state.balanceError = action.error.message
       })
   },
 })
 
-export const { logout, clearAuthError, setCurrentUserBalance } = authSlice.actions
+export const {
+  logout,
+  clearAuthError,
+  clearBalanceCheckout,
+  setCurrentUserBalance,
+} = authSlice.actions
 
 export default authSlice.reducer

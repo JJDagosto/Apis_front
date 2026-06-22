@@ -95,7 +95,7 @@ function ExchangeInventoryPanel({
                 title={item.name}
                 weapon={item.catalogo?.weaponName}
                 exterior={item.catalogo?.exteriorName}
-                price={item.estimatedPrice}
+                price={item.estimatedPrice ?? item.catalogo?.estimatedPrice ?? item.catalogo?.price}
                 status="Inventario"
                 selected={selectedIds.includes(String(item.id))}
                 disabled={Boolean(unavailableLabel)}

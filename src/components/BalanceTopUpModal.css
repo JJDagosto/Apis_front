@@ -160,121 +160,108 @@
   padding: 15px 16px;
 }
 
-.balance-sandbox-card {
+.balance-checkout-card {
   background: #3b3849;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   display: grid;
-  gap: 14px;
+  gap: 16px;
   margin-top: 8px;
-  padding: 18px;
+  padding: 20px;
 }
 
-.balance-sandbox-card > header {
+.balance-checkout-heading {
   align-items: center;
   display: flex;
-  gap: 14px;
-  justify-content: space-between;
+  gap: 12px;
 }
 
-.balance-sandbox-card > header > div {
-  align-items: center;
-  display: flex;
+.balance-checkout-heading > svg {
+  background: rgba(123, 97, 255, 0.18);
+  border-radius: 6px;
+  color: #a99cff;
+  box-sizing: content-box;
+  font-size: 1.1rem;
+  padding: 11px;
+}
+
+.balance-checkout-heading div {
+  display: grid;
+  gap: 3px;
+}
+
+.balance-checkout-heading span,
+.balance-checkout-card > p {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.balance-checkout-card > p {
+  margin: 0;
+}
+
+.balance-payment-actions {
+  display: grid;
   gap: 10px;
 }
 
-.balance-sandbox-card > header > div > svg {
-  color: #54a8ff;
-  font-size: 1.35rem;
-}
-
-.balance-sandbox-card > header span {
-  display: grid;
-  gap: 2px;
-}
-
-.balance-sandbox-card > header small {
-  color: rgba(255, 255, 255, 0.56);
-}
-
-.balance-sandbox-card > header button {
+.balance-submit,
+.balance-verify-button {
   align-items: center;
-  background: rgba(123, 97, 255, 0.16);
-  border: 1px solid rgba(143, 122, 255, 0.44);
   border-radius: 6px;
-  color: #d7d1ff;
-  display: inline-flex;
+  display: flex;
   font-weight: 800;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 11px;
+  gap: 10px;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 16px;
 }
 
-.balance-sandbox-notice {
+.balance-submit {
+  background: #7b61ff;
+  border: 1px solid #7b61ff;
+  color: white;
+}
+
+.balance-submit:hover:not(:disabled) {
+  background: #8b74ff;
+}
+
+.balance-verify-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
+.balance-verify-button:hover:not(:disabled) {
+  border-color: #8f7aff;
+  color: #c7beff;
+}
+
+.balance-submit:disabled,
+.balance-verify-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.balance-brick-notice {
   background: #242130;
   border-left: 3px solid #7b61ff;
   border-radius: 5px;
   color: rgba(255, 255, 255, 0.68);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   margin: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
-.balance-card-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.balance-card-grid label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  font-weight: 700;
-  gap: 6px;
-  min-width: 0;
-}
-
-.balance-card-wide {
-  grid-column: 1 / -1;
-}
-
-.balance-card-grid input,
-.balance-card-input-with-icon {
-  background: #4a4759;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: white;
-  min-height: 42px;
-  outline: 0;
-  width: 100%;
-}
-
-.balance-card-grid > label > input {
-  padding: 0 12px;
-}
-
-.balance-card-input-with-icon {
-  align-items: center;
-  display: flex;
-  padding: 0 12px;
-}
-
-.balance-card-input-with-icon svg {
-  color: rgba(255, 255, 255, 0.48);
-  flex: 0 0 auto;
-}
-
-.balance-card-input-with-icon input {
-  background: transparent;
-  border: 0;
-  min-width: 0;
-  padding: 0 10px;
-}
-
-.balance-card-grid input:focus,
-.balance-card-input-with-icon:focus-within {
-  border-color: #8f7aff;
+.balance-status-message {
+  background: rgba(84, 168, 255, 0.09);
+  border-left: 3px solid #54a8ff;
+  border-radius: 5px;
+  color: #c8e5ff !important;
+  margin: 0;
+  padding: 12px 14px;
 }
 
 .balance-summary-panel {
@@ -351,28 +338,22 @@
   font-size: 2rem;
 }
 
-.balance-submit {
-  align-items: center;
-  background: #7b61ff;
-  border: 1px solid #8f7aff;
-  border-radius: 6px;
-  color: white;
-  display: flex;
-  font-weight: 900;
-  justify-content: center;
-  min-height: 48px;
-  padding: 10px 16px;
-  gap: 9px;
-}
-
-.balance-submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .balance-error {
   color: #ff8a8a;
   font-size: 0.88rem;
+  margin: 0;
+}
+
+.balance-processing {
+  color: #9be6be;
+  font-weight: 700;
+  margin: 0;
+}
+
+.balance-summary-help {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.86rem;
+  line-height: 1.5;
   margin: 0;
 }
 
@@ -407,19 +388,6 @@
 
   .balance-summary-panel {
     padding: 20px 16px;
-  }
-
-  .balance-sandbox-card > header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .balance-card-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .balance-card-wide {
-    grid-column: auto;
   }
 
 }

@@ -15,6 +15,11 @@ function ExchangeItemCard({
   onSelect,
 }) {
   const { formatPrice } = useCurrencyFormatter()
+  const numericPrice = Number(price)
+  const hasPrice = price !== null
+    && price !== undefined
+    && price !== ""
+    && Number.isFinite(numericPrice)
 
   return (
     <button
@@ -33,12 +38,10 @@ function ExchangeItemCard({
         <small>{weapon || status || "CS2"}</small>
         <strong>{limpiarNombreSkin(title)}</strong>
         <em>{exterior || status || "Disponible"}</em>
-      </span>
-      {price != null && (
-        <span className="exchange-item-price">
-          {formatPrice(price)}
+        <span className={`exchange-item-price ${hasPrice ? "" : "unavailable"}`}>
+          {hasPrice ? formatPrice(numericPrice) : "Precio no disponible"}
         </span>
-      )}
+      </span>
       {disabled && unavailableLabel && (
         <span className="exchange-item-unavailable">{unavailableLabel}</span>
       )}

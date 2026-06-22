@@ -1,26 +1,16 @@
-import { useMemo, useState } from "react"
-import { FaTimes, FaWallet } from "react-icons/fa"
-import { SiMercadopago } from "react-icons/si"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { FaExternalLinkAlt, FaTimes, FaWallet } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
-import { agregarSaldo } from "../Redux/authSlice"
+import {
+  clearBalanceCheckout,
+  prepararRecargaSaldo,
+  sincronizarRecargaSaldo,
+} from "../Redux/authSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
-import BalanceSandboxCardForm from "./BalanceSandboxCardForm.jsx"
+import { getMercadoPagoCheckoutUrl } from "../utils/mercadoPagoCheckout"
 import "./BalanceTopUpModal.css"
 
 const QUICK_AMOUNTS = [1500, 3000, 7000, 10000, 20000, 50000]
-
-const getDefaultTestCard = () => ({
-  cardNumber: "4509953566233704",
-  expirationMonth: "11",
-  expirationYear: "2030",
-  securityCode: "123",
-  cardholderName: "APRO",
-  email: "compradora.prueba@mail.com",
-  documentType: "DNI",
-  documentNumber: "12345678",
-  installments: 1,
-  paymentMethodId: "visa",
-})
 
 const formatArs = (value) => new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -28,10 +18,19 @@ const formatArs = (value) => new Intl.NumberFormat("es-AR", {
   minimumFractionDigits: 2,
 }).format(value)
 
+const isApproved = (payment) => (
+  payment?.status === "approved" || payment?.order?.paymentStatus === "PAID"
+)
+
 function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
   const dispatch = useDispatch()
-  const loading = useSelector((state) => state.auth.balanceLoading)
-  const rate = Number(currentUser.usdToArs ?? 1451.02)
+  const {
+    balanceLoading,
+    balanceSyncing,
+    balanceCheckout,
+    balanceError,
+  } = useSelector((state) => state.auth)
+  const rate = Number(currentUser?.usdToArs ?? 1451.02)
   const maxAmountArs = rate * 3000
   const requestedAmountArs = Number(initialAmountUsd) * rate
   const defaultAmountArs = Math.min(
@@ -40,10 +39,9 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
   )
   const [currency, setCurrency] = useState("ARS")
   const [inputValue, setInputValue] = useState(defaultAmountArs.toFixed(2))
-  const [testCardForm, setTestCardForm] = useState(
-    getDefaultTestCard,
-  )
-  const [error, setError] = useState("")
+  const [localError, setLocalError] = useState("")
+  const [statusMessage, setStatusMessage] = useState("")
+  const syncingRef = useRef(false)
 
   const amountArs = useMemo(() => {
     const value = Number(inputValue)
@@ -51,6 +49,15 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     return currency === "ARS" ? value : value * rate
   }, [currency, inputValue, rate])
   const amountUsd = amountArs / rate
+  const amountIsValid = amountArs >= 1500 && amountArs <= maxAmountArs
+  const preparedAmount = Number(balanceCheckout?.order?.totalFinal)
+  const preparedForAmount = Boolean(balanceCheckout?.order?.id) &&
+    Math.abs(preparedAmount - amountArs) < 0.01
+  const checkoutUrl = preparedForAmount
+    ? getMercadoPagoCheckoutUrl(balanceCheckout)
+    : ""
+  const busy = balanceLoading || balanceSyncing
+  const error = localError || balanceError
 
   const changeCurrency = (nextCurrency) => {
     if (nextCurrency === currency) return
@@ -58,33 +65,83 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
       ? amountArs.toFixed(2)
       : amountUsd.toFixed(2))
     setCurrency(nextCurrency)
+    setLocalError("")
+    setStatusMessage("")
   }
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    setError("")
+  const syncPaymentStatus = useCallback(async () => {
+    if (!balanceCheckout?.order?.id || syncingRef.current) return
 
-    if (amountArs < 1500 || amountArs > maxAmountArs) {
-      setError(`Ingresá un importe entre ${formatArs(1500)} y ${formatArs(maxAmountArs)}.`)
+    syncingRef.current = true
+    setLocalError("")
+    setStatusMessage("")
+    try {
+      const result = await dispatch(sincronizarRecargaSaldo()).unwrap()
+      if (isApproved(result.payment)) {
+        const creditedUsd = Number(result.payment?.order?.priceDifference ?? amountUsd)
+        dispatch(mostrarNotificacion(
+          `Se acreditaron $${creditedUsd.toFixed(2)} USD a tu saldo.`,
+          "success",
+        ))
+        dispatch(clearBalanceCheckout())
+        onClose()
+        return
+      }
+      setStatusMessage("El pago todavía está pendiente en Mercado Pago.")
+    } catch (requestError) {
+      setLocalError(requestError.message || "No se pudo verificar la recarga todavía.")
+    } finally {
+      syncingRef.current = false
+    }
+  }, [amountUsd, balanceCheckout?.order?.id, dispatch, onClose])
+
+  useEffect(() => {
+    if (!checkoutUrl || !balanceCheckout?.order?.id) return
+
+    const handleFocus = () => syncPaymentStatus()
+    const handleVisibility = () => {
+      if (!document.hidden) syncPaymentStatus()
+    }
+    window.addEventListener("focus", handleFocus)
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      window.removeEventListener("focus", handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [balanceCheckout?.order?.id, checkoutUrl, syncPaymentStatus])
+
+  const handleContinue = async () => {
+    setLocalError("")
+    setStatusMessage("")
+
+    if (!amountIsValid) {
+      setLocalError(`Ingresá un importe entre ${formatArs(1500)} y ${formatArs(maxAmountArs)}.`)
       return
     }
 
+    const paymentWindow = window.open("", "_blank")
     try {
-      await dispatch(agregarSaldo({
+      const checkout = await dispatch(prepararRecargaSaldo({
         amountArs: Number(amountArs.toFixed(2)),
-        card: {
-          ...testCardForm,
-          expirationMonth: Number(testCardForm.expirationMonth),
-          expirationYear: Number(testCardForm.expirationYear),
-        },
       })).unwrap()
-      dispatch(mostrarNotificacion(
-        `Se acreditaron $${amountUsd.toFixed(2)} USD a tu saldo.`,
-      ))
-      onClose()
+      const paymentUrl = getMercadoPagoCheckoutUrl(checkout)
+
+      if (!paymentUrl) {
+        paymentWindow?.close()
+        throw new Error("Mercado Pago no devolvió una URL de checkout.")
+      }
+
+      if (paymentWindow) {
+        paymentWindow.location.href = paymentUrl
+      } else {
+        window.location.assign(paymentUrl)
+      }
+      setStatusMessage("Completá el pago en Mercado Pago y luego volvé a esta pestaña.")
     } catch (requestError) {
-      setError(requestError.message)
-      dispatch(mostrarNotificacion(requestError.message, "error"))
+      paymentWindow?.close()
+      const message = requestError.message || "No se pudo iniciar la recarga."
+      setLocalError(message)
+      dispatch(mostrarNotificacion(message, "error"))
     }
   }
 
@@ -96,7 +153,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
           className="balance-modal-close"
           onClick={onClose}
           aria-label="Cerrar"
-          disabled={loading}
+          disabled={busy}
         >
           <FaTimes />
         </button>
@@ -105,7 +162,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
           <h2 id="balance-title">Añadir fondos para intercambiar</h2>
         </header>
 
-        <form className="balance-modal-layout" onSubmit={handleSubmit}>
+        <div className="balance-modal-layout">
           <div className="balance-form-column">
             <div className="balance-field-heading">
               <label htmlFor="balance-amount">Importe de la recarga</label>
@@ -123,7 +180,11 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
                 min="0"
                 step="0.01"
                 value={inputValue}
-                onChange={(event) => setInputValue(event.target.value)}
+                onChange={(event) => {
+                  setInputValue(event.target.value)
+                  setLocalError("")
+                  setStatusMessage("")
+                }}
                 required
               />
             </div>
@@ -138,6 +199,8 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
                   onClick={() => {
                     setCurrency("ARS")
                     setInputValue(String(amount))
+                    setLocalError("")
+                    setStatusMessage("")
                   }}
                 >
                   {formatArs(amount)}
@@ -150,19 +213,46 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
               <span className="balance-static-select">🇦🇷 Argentina</span>
             </label>
 
-            <BalanceSandboxCardForm
-              form={testCardForm}
-              disabled={loading}
-              onChange={(field, value) => {
-                setTestCardForm((current) => ({ ...current, [field]: value }))
-                setError("")
-              }}
-              onReset={() => {
-                setTestCardForm(getDefaultTestCard())
-                setError("")
-              }}
-            />
-
+            <section className="balance-checkout-card" aria-label="Pago con Mercado Pago">
+              <div className="balance-checkout-heading">
+                <FaExternalLinkAlt />
+                <div>
+                  <strong>Mercado Pago</strong>
+                  <span>Elegí el medio de pago dentro de Mercado Pago</span>
+                </div>
+              </div>
+              <p>
+                Te redirigiremos al checkout seguro. Los datos del pago no pasan por nuestra aplicación.
+              </p>
+              <div className="balance-payment-actions">
+                <button
+                  type="button"
+                  className="balance-submit"
+                  onClick={handleContinue}
+                  disabled={!amountIsValid || busy}
+                >
+                  <FaExternalLinkAlt />
+                  {balanceLoading ? "Abriendo Mercado Pago..." : `Continuar por ${formatArs(amountArs)}`}
+                </button>
+                {checkoutUrl && (
+                  <button
+                    type="button"
+                    className="balance-verify-button"
+                    onClick={syncPaymentStatus}
+                    disabled={busy}
+                  >
+                    {balanceSyncing ? "Verificando pago..." : "Ya pagué, verificar saldo"}
+                  </button>
+                )}
+              </div>
+              {!amountIsValid && (
+                <p className="balance-brick-notice">
+                  Elegí un importe válido para continuar.
+                </p>
+              )}
+              {statusMessage && <p className="balance-status-message">{statusMessage}</p>}
+              {error && <p className="balance-error">{error}</p>}
+            </section>
           </div>
 
           <aside className="balance-summary-panel">
@@ -172,22 +262,19 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
             </div>
             <dl>
               <div><dt>Tasa de conversión</dt><dd>$1.00 = {formatArs(rate)}</dd></div>
-              <div><dt>M&eacute;todo de pago</dt><dd>Mercado Pago</dd></div>
+              <div><dt>Método de pago</dt><dd>Mercado Pago</dd></div>
               <div><dt>Tu pago</dt><dd>{formatArs(amountArs)}</dd></div>
             </dl>
             <div className="balance-credit-total">
               <span>Se acreditan</span>
               <strong>${Number.isFinite(amountUsd) ? amountUsd.toFixed(2) : "0.00"} USD</strong>
             </div>
-            {error && <p className="balance-error">{error}</p>}
-            <button type="submit" className="balance-submit" disabled={loading || amountArs <= 0}>
-              <SiMercadopago />
-              {loading
-                ? "Procesando con Mercado Pago..."
-                : "Pagar con Mercado Pago y a\u00f1adir $" + amountUsd.toFixed(2) + " USD"}
-            </button>
+            {busy && <p className="balance-processing">Conectando con Mercado Pago...</p>}
+            <p className="balance-summary-help">
+              Mercado Pago se abrirá en una pestaña nueva para que elijas tarjeta, dinero disponible u otro medio habilitado.
+            </p>
           </aside>
-        </form>
+        </div>
       </section>
     </div>
   )

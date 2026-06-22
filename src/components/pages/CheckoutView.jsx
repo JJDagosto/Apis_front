@@ -13,27 +13,8 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import CheckoutBalancePayment from "../checkout/CheckoutBalancePayment.jsx"
 import CheckoutMercadoPagoPayment from "../checkout/CheckoutMercadoPagoPayment.jsx"
+import { getMercadoPagoCheckoutUrl } from "../../utils/mercadoPagoCheckout"
 import "../../pages/Checkout.css"
-
-const getCheckoutUrl = (data) => {
-  if (!data || data.checkoutMode === "local") return ""
-
-  const isTestKey = data.publicKey?.startsWith("TEST-")
-  const preferTestCheckout = data.checkoutMode === "sandbox" || isTestKey
-  const serverCheckoutUrl = data.checkoutUrl || ""
-  const usableServerCheckoutUrl =
-    preferTestCheckout === serverCheckoutUrl.includes("sandbox.mercadopago")
-      ? serverCheckoutUrl
-      : ""
-
-  return (
-    usableServerCheckoutUrl ||
-    (preferTestCheckout ? data.sandboxInitPoint : data.initPoint) ||
-    data.initPoint ||
-    data.sandboxInitPoint ||
-    ""
-  )
-}
 
 const getConfirmedTradeStatus = (tradeStatus) => {
   if (tradeStatus === "WAITING_UNLOCK") return "Esperando desbloqueo de Steam"
@@ -67,7 +48,7 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
   const openMisPublicaciones = goToMisPublicaciones ?? (() => navigate("/mis-publicaciones"))
   const order = data?.order
   const amount = order?.totalFinal ?? order?.totalPrice
-  const checkoutUrl = getCheckoutUrl(data)
+  const checkoutUrl = getMercadoPagoCheckoutUrl(data)
   const checkoutReady = Boolean(order)
   const loading = status === "loading"
   const error = localError || checkoutError
@@ -152,7 +133,7 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
 
     try {
       const preparedCheckout = await dispatch(prepararMercadoPagoCheckout()).unwrap()
-      const paymentUrl = getCheckoutUrl(preparedCheckout)
+      const paymentUrl = getMercadoPagoCheckoutUrl(preparedCheckout)
 
       if (paymentUrl) {
         if (paymentWindow) {
