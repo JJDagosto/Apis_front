@@ -5,7 +5,7 @@ import ExchangeItemCard from "./ExchangeItemCard.jsx"
 import ExchangePanelSearch from "./ExchangePanelSearch.jsx"
 
 const getUnavailableLabel = (item) => {
-  if (item.publicado) return "Ya publicado"
+  if (item.publicado) return "Publicado para venta"
   if (item.pending) return "En otra operaci\u00f3n"
   if (item.tradable === false) return "No intercambiable"
   return null

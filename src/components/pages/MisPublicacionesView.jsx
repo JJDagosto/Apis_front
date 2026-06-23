@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { FaCreditCard, FaPen, FaPause, FaPlay, FaTimes, FaTrash } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
+import { fetchInventario } from "../../Redux/inventarioSlice"
 import {
   activarPublicacion,
   cancelarPagoPendiente,
@@ -17,10 +18,7 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import ExchangeOperationsSection from "../publicaciones/ExchangeOperationsSection.jsx"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
-import {
-  getPositivePriceError,
-  getPublicationAvailabilityError,
-} from "../../utils/validations.jsx"
+import { getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/MisPublicaciones.css"
 
 const getEstadoPublicacion = (skin) => {
@@ -96,8 +94,6 @@ function MisPublicaciones({ goToLogin }) {
   const [actionId, setActionId] = useState(null)
   const [editItem, setEditItem] = useState(null)
   const [editPrice, setEditPrice] = useState("")
-  const [editVendible, setEditVendible] = useState(true)
-  const [editIntercambiable, setEditIntercambiable] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState(null)
 
@@ -134,8 +130,9 @@ function MisPublicaciones({ goToLogin }) {
     setActionId(skin.id)
     try {
       const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
+      dispatch(fetchInventario({ force: true }))
       dispatch(mostrarNotificacion(
-        result.message || "Publicación dada de baja.",
+        result.message || "Publicación retirada. El bot devolverá la skin al inventario.",
       ))
     } catch (err) {
       setError(err.message)
@@ -165,8 +162,6 @@ function MisPublicaciones({ goToLogin }) {
     setError("")
     setEditItem(skin)
     setEditPrice(String(skin.price ?? ""))
-    setEditVendible(skin.vendible !== false)
-    setEditIntercambiable(skin.intercambiable !== false)
   }
 
   const closeEdit = () => {
@@ -184,20 +179,14 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
-    const availabilityError = getPublicationAvailabilityError(editVendible, editIntercambiable)
-    if (availabilityError) {
-      setError(availabilityError)
-      return
-    }
-
     setSaving(true)
     try {
       await dispatch(editarPublicacion({
         skinId: editItem.id,
         price: Number(editPrice),
         discount: editItem.discount ?? 0,
-        vendible: editVendible,
-        intercambiable: editIntercambiable,
+        vendible: true,
+        intercambiable: false,
       })).unwrap()
       dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
       setEditItem(null)
@@ -245,7 +234,7 @@ function MisPublicaciones({ goToLogin }) {
           disabled={disabled}
           onClick={() => handleDespublicar(skin)}
         >
-          <FaPause /> {disabled ? "..." : "Dar de baja"}
+          <FaPause /> {disabled ? "..." : "Retirar"}
         </button>
       </div>
     )
@@ -488,25 +477,6 @@ function MisPublicaciones({ goToLogin }) {
                 required
               />
             </label>
-
-            <div className="pub-modal-checks">
-              <label className="pub-check">
-                <input
-                  type="checkbox"
-                  checked={editVendible}
-                  onChange={(e) => setEditVendible(e.target.checked)}
-                />
-                Vendible
-              </label>
-              <label className="pub-check">
-                <input
-                  type="checkbox"
-                  checked={editIntercambiable}
-                  onChange={(e) => setEditIntercambiable(e.target.checked)}
-                />
-                Intercambiable
-              </label>
-            </div>
 
             <button type="submit" className="pub-btn pub-btn-save" disabled={saving}>
               {saving ? "Guardando..." : "Guardar cambios"}

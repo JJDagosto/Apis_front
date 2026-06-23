@@ -41,8 +41,8 @@ export const getPositivePriceError = (price) => {
 }
 
 export const getPublicationAvailabilityError = (vendible, intercambiable) => {
-  if (!vendible && !intercambiable) {
-    return "La skin debe ser vendible, intercambiable o ambas."
+  if (Boolean(vendible) === Boolean(intercambiable)) {
+    return "La skin debe ser vendible o intercambiable, no ambas."
   }
 
   return ""

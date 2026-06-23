@@ -36,8 +36,8 @@ function ComoFunciona() {
           tardar hasta 7 días en poder entregarse. Esta espera es de Steam, no nuestra.
         </p>
         <p>
-          <strong>Intercambiable / Vendible:</strong> cada publicación puede ofrecerse para venta,
-          para intercambio o ambas. Lo configurás al publicar y lo podés cambiar después.
+          <strong>Intercambiable / Vendible:</strong> una skin publicada para venta queda en custodia
+          del bot y no puede usarse en intercambios. Para intercambiar usás skins de tu inventario no publicadas.
         </p>
         <p>
           <strong>Saldo:</strong> el dinero a favor de tus ventas o ajustes queda como saldo en tu

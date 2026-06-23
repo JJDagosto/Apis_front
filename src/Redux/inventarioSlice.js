@@ -35,7 +35,7 @@ export const sincronizarInventario = createAsyncThunk(
 export const publicarInventarioItem = createAsyncThunk(
   "inventario/publicarInventarioItem",
   async (
-    { itemId, price, discount = 0, vendible = true, intercambiable = true },
+    { itemId, price, discount = 0, vendible = true, intercambiable = false },
     { getState },
   ) => {
     const response = await apiRequest(

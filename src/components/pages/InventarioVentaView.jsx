@@ -14,10 +14,7 @@ import {
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
-import {
-  getPositivePriceError,
-  getPublicationAvailabilityError,
-} from "../../utils/validations.jsx"
+import { getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/InventarioVenta.css"
 
 function InventarioVenta({ goToLogin, goToPerfil }) {
@@ -39,8 +36,6 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const loading = status === "loading"
   const [selectedItem, setSelectedItem] = useState(null)
   const [price, setPrice] = useState("")
-  const [vendible, setVendible] = useState(true)
-  const [intercambiable, setIntercambiable] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -89,8 +84,6 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
 
     setSelectedItem(item)
     setPrice("")
-    setVendible(true)
-    setIntercambiable(true)
     setError("")
   }
 
@@ -115,18 +108,12 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
       return
     }
 
-    const availabilityError = getPublicationAvailabilityError(vendible, intercambiable)
-    if (availabilityError) {
-      setError(availabilityError)
-      return
-    }
-
     try {
       const result = await dispatch(publicarInventarioItem({
         itemId: selectedItem.id,
         price: Number(price),
-        vendible,
-        intercambiable,
+        vendible: true,
+        intercambiable: false,
       })).unwrap()
       dispatch(mostrarNotificacion(
         result.message || "Publicación creada correctamente.",
@@ -153,7 +140,7 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
     if (publication?.estadoPublicacion === "VENDIDA") {
       return "Vendida · Intercambio completado"
     }
-    if (item.publicado) return "Ya publicado"
+    if (item.publicado) return "Publicado para venta"
     if (item.pending) return "Pendiente"
     if (item.tradable === false) return "No tradeable"
     return "Disponible"
@@ -305,29 +292,10 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
               />
             </label>
 
-            <div className="publish-modal-checks">
-              <label className="publish-check">
-                <input
-                  type="checkbox"
-                  checked={vendible}
-                  onChange={(event) => setVendible(event.target.checked)}
-                />
-                Vendible
-              </label>
-              <label className="publish-check">
-                <input
-                  type="checkbox"
-                  checked={intercambiable}
-                  onChange={(event) => setIntercambiable(event.target.checked)}
-                />
-                Intercambiable
-              </label>
-            </div>
-
             <div className="publish-warning">
               <strong>Antes de publicar</strong>
               <p>
-                La skin será retirada de tu inventario al publicarla. Por normativas de Steam, podrá ser comprada recién 7 días después de la publicación. Si retiraras la publicación, la devolución también podría quedar sujeta a esa espera de 7 días. Esta condición depende de Steam, no de nuestro marketplace.
+                La skin será retirada de tu inventario al publicarla para venta y no podrá usarse en intercambios mientras esté publicada. Si retirás la publicación, el bot te la devuelve al inventario y vuelve a quedar disponible para intercambio.
               </p>
             </div>
 

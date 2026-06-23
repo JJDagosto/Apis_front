@@ -98,7 +98,7 @@ function Publicacion() {
         price: Number(ownerPrice),
         discount: skin.discount ?? 0,
         vendible: skin.vendible !== false,
-        intercambiable: skin.intercambiable !== false,
+        intercambiable: skin.vendible !== false ? false : skin.intercambiable === true,
       })).unwrap()
       dispatch(mostrarNotificacion("Precio actualizado correctamente."))
     } catch (error) {

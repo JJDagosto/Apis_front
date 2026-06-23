@@ -79,7 +79,7 @@ export const fetchSalesNotifications = createAsyncThunk(
 
 export const editarPublicacion = createAsyncThunk(
   "publicaciones/editarPublicacion",
-  async ({ skinId, price, discount = 0, vendible = true, intercambiable = true }, { getState }) => {
+  async ({ skinId, price, discount = 0, vendible = true, intercambiable = false }, { getState }) => {
     const response = await apiRequest(
       `/skins/${skinId}`,
       {
@@ -219,9 +219,8 @@ const publicacionesSlice = createSlice({
         updateSkin(state.historial, action.payload.id, action.payload)
       })
       .addCase(despublicarPublicacion.fulfilled, (state, action) => {
-        const changes = { active: false, estadoPublicacion: "PAUSADA" }
-        updateSkin(state.items, action.payload.skinId, changes)
-        updateSkin(state.historial, action.payload.skinId, changes)
+        state.items = state.items.filter((skin) => skin.id !== action.payload.skinId)
+        state.historial = state.historial.filter((skin) => skin.id !== action.payload.skinId)
       })
       .addCase(activarPublicacion.fulfilled, (state, action) => {
         const changes = { active: true, estadoPublicacion: "PUBLICADA" }

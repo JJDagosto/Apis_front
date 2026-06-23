@@ -355,7 +355,8 @@
   color: #d8d8e2;
 }
 
-.pub-check input[type="checkbox"] {
+.pub-check input[type="checkbox"],
+.pub-check input[type="radio"] {
   width: 16px;
   height: 16px;
   cursor: pointer;

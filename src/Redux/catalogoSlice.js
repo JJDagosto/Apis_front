@@ -209,7 +209,8 @@ export const selectFilteredCatalogItems = createSelector(
         filters.precioMax === "" || skin.price <= Number(filters.precioMax)
 
       const cumpleIntercambiable =
-        !filters.intercambiable || skin.intercambiable === true
+        !filters.intercambiable ||
+        (skin.intercambiable === true && skin.vendible !== true)
 
       const cumpleVendible = !filters.vendible || skin.vendible === true
 
@@ -244,7 +245,8 @@ export const selectFilteredCatalogItems = createSelector(
 
 export const selectExchangeCatalogItems = createSelector(
   [selectFilteredCatalogItems],
-  (items) => items.filter((skin) => skin.intercambiable === true),
+  (items) => items.filter((skin) =>
+    skin.intercambiable === true && skin.vendible !== true),
 )
 
 export default catalogoSlice.reducer
