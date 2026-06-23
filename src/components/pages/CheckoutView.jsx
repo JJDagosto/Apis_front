@@ -65,12 +65,17 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
     session?.data?.order?.id
 
   useEffect(() => {
-    if (!currentUser || hasReusableCheckout || completedResult?.status === "approved") return
+    if (
+      !currentUser ||
+      order?.id ||
+      hasReusableCheckout ||
+      completedResult?.status === "approved"
+    ) return
     dispatch(iniciarCheckout({
       cupon: normalizedCupon,
       email: currentUser.email,
     }))
-  }, [completedResult?.status, currentUser, dispatch, hasReusableCheckout, normalizedCupon])
+  }, [completedResult?.status, currentUser, dispatch, hasReusableCheckout, normalizedCupon, order?.id])
 
   useEffect(() => {
     if (completedResult?.status !== "approved") return

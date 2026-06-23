@@ -122,6 +122,18 @@ export const activarPublicacion = createAsyncThunk(
   },
 )
 
+export const cancelarPagoPendiente = createAsyncThunk(
+  "publicaciones/cancelarPagoPendiente",
+  async (orderId, { getState }) => {
+    const response = await apiRequest(
+      `/order/${orderId}/cancel-pending`,
+      { method: "POST" },
+      getToken(getState),
+    )
+    return response.data
+  },
+)
+
 const updateSkin = (items, skinId, changes) => {
   const index = items.findIndex((skin) => skin.id === skinId)
   if (index !== -1) {
@@ -215,6 +227,11 @@ const publicacionesSlice = createSlice({
         const changes = { active: true, estadoPublicacion: "PUBLICADA" }
         updateSkin(state.items, action.payload.skinId, changes)
         updateSkin(state.historial, action.payload.skinId, changes)
+      })
+      .addCase(cancelarPagoPendiente.fulfilled, (state, action) => {
+        state.pagosPendientes = state.pagosPendientes.filter(
+          (order) => order.id !== action.payload.id,
+        )
       })
       .addCase(publicarInventarioItem.fulfilled, (state, action) => {
         state.items.push(action.payload.skin)

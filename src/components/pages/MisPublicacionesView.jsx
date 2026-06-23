@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react"
-import { FaPen, FaPause, FaPlay, FaTimes } from "react-icons/fa"
+import { FaCreditCard, FaPen, FaPause, FaPlay, FaTimes, FaTrash } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import {
   activarPublicacion,
+  cancelarPagoPendiente,
   despublicarPublicacion,
   editarPublicacion,
   fetchDetallePublicaciones,
   fetchMisPublicaciones,
   fetchSalesNotifications,
 } from "../../Redux/publicacionesSlice"
+import { resetCheckout, retomarCheckoutPendiente } from "../../Redux/checkoutSlice"
 import { fetchMisOperaciones } from "../../Redux/intercambioSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import ExchangeOperationsSection from "../publicaciones/ExchangeOperationsSection.jsx"
@@ -97,12 +99,13 @@ function MisPublicaciones({ goToLogin }) {
   const [editVendible, setEditVendible] = useState(true)
   const [editIntercambiable, setEditIntercambiable] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState(null)
 
   useEffect(() => {
     if (currentUser) {
-      dispatch(fetchMisPublicaciones({ force: true }))
-      dispatch(fetchDetallePublicaciones({ force: true }))
-      dispatch(fetchSalesNotifications({ force: true }))
+      dispatch(fetchMisPublicaciones())
+      dispatch(fetchDetallePublicaciones())
+      dispatch(fetchSalesNotifications())
       dispatch(fetchMisOperaciones())
     }
   }, [currentUser, dispatch])
@@ -121,6 +124,10 @@ function MisPublicaciones({ goToLogin }) {
 
   const activas = publicaciones.filter((skin) => getEstadoPublicacion(skin) === "PUBLICADA")
   const pausadas = publicaciones.filter((skin) => getEstadoPublicacion(skin) === "PAUSADA")
+  const activityCount =
+    compras.reduce((acc, order) => acc + (order.orderDetailResponses?.length ?? 0), 0) +
+    intercambios.length +
+    historial.length
 
   const handleDespublicar = async (skin) => {
     setError("")
@@ -244,7 +251,38 @@ function MisPublicaciones({ goToLogin }) {
     )
   }
 
+  const handleRetomarPago = (orden) => {
+    dispatch(retomarCheckoutPendiente({
+      order: orden,
+      email: currentUser.email,
+    }))
+    navigate("/checkout")
+  }
+
+  const handleCancelarPagoPendiente = async (orden) => {
+    setError("")
+
+    const confirmed = window.confirm(
+      `¿Cancelar la reserva de la orden #${orden.id}? La skin vuelve a estar publicada para otros compradores.`,
+    )
+    if (!confirmed) return
+
+    setPendingActionId(orden.id)
+    try {
+      await dispatch(cancelarPagoPendiente(orden.id)).unwrap()
+      dispatch(resetCheckout())
+      dispatch(mostrarNotificacion("Pago pendiente cancelado. La publicación volvió al catálogo."))
+    } catch (err) {
+      setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
+    } finally {
+      setPendingActionId(null)
+    }
+  }
+
   const renderCompraCard = (orden, pagoPendiente = false) => {
+    const pendingBusy = pendingActionId === orden.id
+
     return orden.orderDetailResponses?.map((item) => (
       <article
         className={`pub-card${pagoPendiente ? " pub-card-payment-pending" : ""}`}
@@ -270,10 +308,31 @@ function MisPublicaciones({ goToLogin }) {
                 : getTradeStatusLabel(orden.tradeStatus)}
             </strong>
             {pagoPendiente && (
-              <small>La publicación permanece reservada hasta recibir la confirmación.</small>
+              <small>La publicación permanece reservada hasta que pagues o canceles la reserva.</small>
             )}
           </div>
         </div>
+
+        {pagoPendiente && (
+          <div className="pub-actions pub-pending-actions">
+            <button
+              type="button"
+              className="pub-btn pub-btn-edit"
+              disabled={pendingBusy}
+              onClick={() => handleRetomarPago(orden)}
+            >
+              <FaCreditCard /> Pagar ahora
+            </button>
+            <button
+              type="button"
+              className="pub-btn pub-btn-danger"
+              disabled={pendingBusy}
+              onClick={() => handleCancelarPagoPendiente(orden)}
+            >
+              <FaTrash /> {pendingBusy ? "Cancelando..." : "Cancelar reserva"}
+            </button>
+          </div>
+        )}
       </article>
     ))
   }
@@ -374,33 +433,37 @@ function MisPublicaciones({ goToLogin }) {
             )}
           </section>
 
-          <section className="pub-section">
-            <h2>Mis compras ({compras.reduce((acc, o) => acc + (o.orderDetailResponses?.length ?? 0), 0)})</h2>
-            {compras.length === 0 ? (
-              <p className="pub-message">Todavía no compraste ninguna skin.</p>
-            ) : (
-              <div className="pub-grid">
-                {compras.map((orden) => renderCompraCard(orden))}
-              </div>
-            )}
-          </section>
+          <details className="pub-activity">
+            <summary>Actividad anterior ({activityCount})</summary>
 
-          <ExchangeOperationsSection
-            operations={intercambios}
-            loading={operationsStatus === "loading"}
-            onRefresh={() => dispatch(fetchMisOperaciones({ force: true }))}
-          />
+            <section className="pub-section">
+              <h2>Mis compras ({compras.reduce((acc, o) => acc + (o.orderDetailResponses?.length ?? 0), 0)})</h2>
+              {compras.length === 0 ? (
+                <p className="pub-message">Todavía no compraste ninguna skin.</p>
+              ) : (
+                <div className="pub-grid">
+                  {compras.map((orden) => renderCompraCard(orden))}
+                </div>
+              )}
+            </section>
 
-          <section className="pub-section">
-            <h2>Historial ({historial.length})</h2>
-            {historial.length === 0 ? (
-              <p className="pub-message">Todavía no tenés publicaciones vendidas o reservadas.</p>
-            ) : (
-              <div className="pub-grid">
-                {historial.map((skin) => renderCard(skin, false))}
-              </div>
-            )}
-          </section>
+            <ExchangeOperationsSection
+              operations={intercambios}
+              loading={operationsStatus === "loading"}
+              onRefresh={() => dispatch(fetchMisOperaciones({ force: true }))}
+            />
+
+            <section className="pub-section">
+              <h2>Historial ({historial.length})</h2>
+              {historial.length === 0 ? (
+                <p className="pub-message">Todavía no tenés publicaciones vendidas o reservadas.</p>
+              ) : (
+                <div className="pub-grid">
+                  {historial.map((skin) => renderCard(skin, false))}
+                </div>
+              )}
+            </section>
+          </details>
         </>
       )}
 

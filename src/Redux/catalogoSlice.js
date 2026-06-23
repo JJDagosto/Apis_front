@@ -3,6 +3,7 @@ import { apiRequest } from "../api/client"
 import { limpiarNombreSkin } from "../utils/skinFormat"
 import {
   activarPublicacion,
+  cancelarPagoPendiente,
   despublicarPublicacion,
   editarPublicacion,
 } from "./publicacionesSlice"
@@ -145,6 +146,19 @@ const catalogoSlice = createSlice({
       })
       .addCase(iniciarCheckout.fulfilled, (state, action) => {
         markOrderSkinsAsReserved(state, action.payload.data?.order)
+      })
+      .addCase(cancelarPagoPendiente.fulfilled, (state, action) => {
+        const skinIds = new Set(
+          (action.payload.orderDetailResponses ?? [])
+            .map((detail) => detail.skinId)
+            .filter(Boolean),
+        )
+
+        state.items.forEach((skin) => {
+          if (!skinIds.has(skin.id)) return
+          skin.estadoPublicacion = "PUBLICADA"
+          skin.active = true
+        })
       })
   },
 })

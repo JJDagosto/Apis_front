@@ -271,6 +271,24 @@ const checkoutSlice = createSlice({
       state.result = null
       state.error = null
     },
+    retomarCheckoutPendiente: (state, action) => {
+      const order = action.payload?.order
+      const email = action.payload?.email
+      const data = {
+        order,
+        preferenceId: order?.mercadopagoPreferenceId,
+      }
+
+      state.session = { email, cupon: "", data }
+      state.data = data
+      state.status = "succeeded"
+      state.syncing = false
+      state.testProcessing = false
+      state.balanceProcessing = false
+      state.mercadoPagoProcessing = false
+      state.result = null
+      state.error = null
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -392,6 +410,10 @@ const checkoutSlice = createSlice({
   },
 })
 
-export const { resetCheckout, clearCheckoutResult } = checkoutSlice.actions
+export const {
+  resetCheckout,
+  clearCheckoutResult,
+  retomarCheckoutPendiente,
+} = checkoutSlice.actions
 
 export default checkoutSlice.reducer

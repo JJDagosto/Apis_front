@@ -129,7 +129,7 @@ function Publicacion() {
     }
   }
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     setError("")
 
     if (!currentUser) {
@@ -143,7 +143,24 @@ function Publicacion() {
       return
     }
 
-    navigate("/carrito")
+    if (isInCart) {
+      navigate("/carrito")
+      return
+    }
+
+    setAddingCart(true)
+
+    try {
+      await dispatch(agregarAlCarrito(skin.id)).unwrap()
+      dispatch(resetCheckout())
+      dispatch(mostrarNotificacion("Ítem agregado al carrito con éxito."))
+      navigate("/carrito")
+    } catch (error) {
+      setError(error.message)
+      dispatch(mostrarNotificacion(error.message, "error"))
+    } finally {
+      setAddingCart(false)
+    }
   }
 
   if (loading) {
@@ -256,8 +273,12 @@ function Publicacion() {
             </form>
           ) : (
             <div className="publication-actions">
-              <button className="publication-buy" onClick={handleBuyNow}>
-                <FaCreditCard /> Comprar ahora
+              <button
+                className="publication-buy"
+                onClick={handleBuyNow}
+                disabled={addingCart}
+              >
+                <FaCreditCard /> {addingCart ? "Preparando..." : "Comprar ahora"}
               </button>
               <button
                 className={`publication-cart ${isInCart ? "publication-cart-active" : ""}`}
