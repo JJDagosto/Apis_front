@@ -7,7 +7,7 @@ import {
   validarCheckoutCupon,
 } from "../../Redux/appSlice"
 import { eliminarItemCarrito, vaciarCarrito } from "../../Redux/carritoSlice"
-import { prepararCheckoutCarrito, resetCheckout } from "../../Redux/checkoutSlice"
+import { prepararCheckoutCarrito } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { getCartTotals } from "../../utils/cartTotals"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
@@ -27,6 +27,21 @@ function CartPage() {
     couponStatus,
     couponError,
   } = useSelector((state) => state.app)
+  const checkoutNeedsPreparation = useSelector((state) => {
+    const checkout = state.checkout
+    return Boolean(
+      checkout.instantItem ||
+        checkout.session ||
+        checkout.data ||
+        checkout.result ||
+        checkout.error ||
+        checkout.status !== "idle" ||
+        checkout.syncing ||
+        checkout.testProcessing ||
+        checkout.balanceProcessing ||
+        checkout.mercadoPagoProcessing,
+    )
+  })
   const [error, setError] = useState("")
   const [cupon, setCupon] = useState("")
 
@@ -53,7 +68,6 @@ function CartPage() {
 
     try {
       await dispatch(eliminarItemCarrito(itemId)).unwrap()
-      dispatch(resetCheckout())
       dispatch(mostrarNotificacion("Ítem eliminado del carrito."))
     } catch (removeError) {
       setError(removeError.message)
@@ -66,7 +80,6 @@ function CartPage() {
 
     try {
       await dispatch(vaciarCarrito()).unwrap()
-      dispatch(resetCheckout())
       dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
     } catch (clearError) {
       setError(clearError.message)
@@ -86,7 +99,9 @@ function CartPage() {
       return
     }
 
-    dispatch(prepararCheckoutCarrito())
+    if (checkoutNeedsPreparation) {
+      dispatch(prepararCheckoutCarrito())
+    }
     dispatch(setCheckoutCupon(cupon))
     navigate("/checkout")
   }

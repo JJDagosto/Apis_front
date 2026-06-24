@@ -16,8 +16,8 @@ function Soporte({ goToForgot }) {
         <h2>Contacto</h2>
         <p>
           Escribinos a{" "}
-          <a className="info-contact" href="mailto:soporte@skinsmarket.com">
-            soporte@skinsmarket.com
+          <a className="info-contact" href="mailto:support.skinsmarket@gmail.com">
+            support.skinsmarket@gmail.com
           </a>{" "}
           y te respondemos a la brevedad. Incluí tu usuario y, si es por una compra,
           el número de orden.
