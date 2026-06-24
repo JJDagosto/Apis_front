@@ -1,7 +1,6 @@
 import logo from "../images/logo.png"
 import { FaShoppingCart } from "react-icons/fa"
 import { Link, useNavigate } from "react-router-dom"
-import SteamLoginButton from "./SteamLoginButton.jsx"
 import BalanceWidget from "./BalanceWidget.jsx"
 import CurrencySelector from "./CurrencySelector.jsx"
 import SalesNotificationBell from "./SalesNotificationBell.jsx"
@@ -72,9 +71,13 @@ const NavBar = ({ currentUser, onLogout, cartCount = 0 }) => {
             >
               Registrarse
             </button>
-            <SteamLoginButton
+            <button
               className="btn btn-warning nav-session-button nav-steam-button"
-            />
+              type="button"
+              onClick={() => navigate("/login")}
+            >
+              Iniciar sesion
+            </button>
           </div>
         )}
       </div>

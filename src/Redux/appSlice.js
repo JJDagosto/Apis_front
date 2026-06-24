@@ -1,8 +1,25 @@
-import { createSlice } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
+import { apiRequest } from "../api/client"
+
+export const validarCheckoutCupon = createAsyncThunk(
+  "app/validarCheckoutCupon",
+  async (codigo, { getState }) => {
+    const token = getState().auth.token
+    const response = await apiRequest(
+      `/cupones/validar?codigo=${encodeURIComponent(codigo)}`,
+      {},
+      token,
+    )
+    return response.data
+  },
+)
 
 const initialState = {
   checkoutCupon: "",
-  currency: "USD",
+  currency: "ARS",
+  couponValidation: null,
+  couponStatus: "idle",
+  couponError: null,
 }
 
 const appSlice = createSlice({
@@ -19,7 +36,32 @@ const appSlice = createSlice({
     },
     resetAppSession: (state) => {
       state.checkoutCupon = ""
+      state.couponValidation = null
+      state.couponStatus = "idle"
+      state.couponError = null
     },
+    clearCheckoutCuponValidation: (state) => {
+      state.couponValidation = null
+      state.couponStatus = "idle"
+      state.couponError = null
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(validarCheckoutCupon.pending, (state) => {
+        state.couponStatus = "loading"
+        state.couponError = null
+      })
+      .addCase(validarCheckoutCupon.fulfilled, (state, action) => {
+        state.couponStatus = "succeeded"
+        state.couponValidation = action.payload
+        state.couponError = null
+      })
+      .addCase(validarCheckoutCupon.rejected, (state, action) => {
+        state.couponStatus = "failed"
+        state.couponValidation = null
+        state.couponError = action.error.message
+      })
   },
 })
 
@@ -27,6 +69,7 @@ export const {
   setCheckoutCupon,
   setCurrency,
   resetAppSession,
+  clearCheckoutCuponValidation,
 } = appSlice.actions
 
 export default appSlice.reducer

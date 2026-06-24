@@ -2,10 +2,14 @@ import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 
 function CartSummary({
   cupon,
+  couponValidation,
+  couponStatus,
+  couponError,
   totals,
   tradeUrlIssue,
   updating,
   onCuponChange,
+  onValidateCupon,
   onCheckout,
   onCompleteProfile,
 }) {
@@ -13,6 +17,9 @@ function CartSummary({
   const couponCode = cupon.trim()
   const hasCoupon = couponCode.length > 0
   const hasSkinDiscount = totals.skinDiscountTotal > 0
+  const couponDiscount = Number(couponValidation?.descuento ?? 0)
+  const couponValidForCode =
+    couponValidation?.codigo?.toUpperCase?.() === couponCode.toUpperCase()
 
   return (
     <aside className="cart-summary">
@@ -45,7 +52,11 @@ function CartSummary({
       {hasCoupon && (
         <div className="cart-summary-row cart-summary-coupon">
           <span>Cupón {couponCode.toUpperCase()}</span>
-          <strong>A validar</strong>
+          <strong>
+            {couponValidForCode
+              ? `${Math.round(couponDiscount * 100)}% OFF`
+              : "A validar"}
+          </strong>
         </div>
       )}
       <div className="cart-summary-row cart-summary-total">
@@ -62,6 +73,21 @@ function CartSummary({
           placeholder="Ingresá un código"
         />
       </label>
+
+      <button
+        type="button"
+        className="cart-validate-coupon"
+        onClick={onValidateCupon}
+        disabled={!hasCoupon || couponStatus === "loading"}
+      >
+        {couponStatus === "loading" ? "Validando..." : "Validar cupón"}
+      </button>
+      {couponError && <small className="cart-coupon-error">{couponError}</small>}
+      {couponValidForCode && (
+        <small className="cart-coupon-success">
+          Cupón aplicado: {Math.round(couponDiscount * 100)}% de descuento.
+        </small>
+      )}
 
       <button
         type="button"

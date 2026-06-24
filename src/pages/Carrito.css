@@ -168,6 +168,32 @@
   box-shadow: 0 0 0 3px rgba(255, 202, 44, 0.14);
 }
 
+.cart-validate-coupon {
+  background: transparent !important;
+  border: 1px solid rgba(255, 202, 44, 0.45) !important;
+  color: #ffca2c !important;
+  margin-top: 0 !important;
+}
+
+.cart-validate-coupon:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cart-coupon-error,
+.cart-coupon-success {
+  display: block;
+  line-height: 1.35;
+}
+
+.cart-coupon-error {
+  color: #ff7b7b;
+}
+
+.cart-coupon-success {
+  color: #54d98c;
+}
+
 .cart-summary-row {
   align-items: center;
   display: flex;

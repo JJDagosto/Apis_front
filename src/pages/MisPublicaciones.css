@@ -215,13 +215,14 @@
 
 .pub-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 12px 14px;
   border-top: 1px solid #2a2a3d;
 }
 
 .pub-btn {
-  flex: 1;
+  flex: 1 1 96px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -319,6 +320,17 @@
   border-radius: 8px;
   padding: 8px 10px;
   color: #fff;
+}
+
+.pub-modal-hint {
+  background: rgba(255, 202, 44, 0.08);
+  border: 1px solid rgba(255, 202, 44, 0.18);
+  border-radius: 8px;
+  color: #ffca2c;
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 9px 10px;
 }
 
 .pub-modal-toggles {

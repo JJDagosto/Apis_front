@@ -39,7 +39,7 @@ function CheckoutMercadoPagoPayment({
           </button>
           {checkoutUrl && (
             <button type="button" className="checkout-secondary" onClick={onSync} disabled={disabled || syncing}>
-              {syncing ? "Verificando pago..." : "Ya pagu&eacute;, verificar pago"}
+              {syncing ? "Verificando pago..." : "Ya pagué, verificar pago"}
             </button>
           )}
         </>

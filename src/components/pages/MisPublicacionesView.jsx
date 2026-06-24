@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { FaCreditCard, FaPen, FaPause, FaPlay, FaTimes, FaTrash } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { fetchInventario } from "../../Redux/inventarioSlice"
+import { marcarInventarioItemDisponible } from "../../Redux/inventarioSlice"
 import {
   activarPublicacion,
   cancelarPagoPendiente,
@@ -11,6 +11,7 @@ import {
   fetchDetallePublicaciones,
   fetchMisPublicaciones,
   fetchSalesNotifications,
+  pausarPublicacion,
 } from "../../Redux/publicacionesSlice"
 import { resetCheckout, retomarCheckoutPendiente } from "../../Redux/checkoutSlice"
 import { fetchMisOperaciones } from "../../Redux/intercambioSlice"
@@ -57,6 +58,8 @@ const getTradeStatusLabel = (tradeStatus) => {
   return labels[tradeStatus] ?? "Compra confirmada"
 }
 
+const parseDecimalInput = (value) => Number(String(value).replace(",", "."))
+
 function EstadoBadge({ estado }) {
   return (
     <span className={`pub-badge ${getEstadoClass(estado)}`}>
@@ -94,6 +97,7 @@ function MisPublicaciones({ goToLogin }) {
   const [actionId, setActionId] = useState(null)
   const [editItem, setEditItem] = useState(null)
   const [editPrice, setEditPrice] = useState("")
+  const [editDiscount, setEditDiscount] = useState("0")
   const [saving, setSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState(null)
 
@@ -130,9 +134,30 @@ function MisPublicaciones({ goToLogin }) {
     setActionId(skin.id)
     try {
       const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
-      dispatch(fetchInventario({ force: true }))
+      dispatch(marcarInventarioItemDisponible({
+        itemId: skin.inventarioItem?.id,
+        steamAssetId: skin.steamAssetId,
+        catalogoId: skin.catalogo?.id,
+        name: skin.name,
+      }))
       dispatch(mostrarNotificacion(
         result.message || "Publicación retirada. El bot devolverá la skin al inventario.",
+      ))
+    } catch (err) {
+      setError(err.message)
+      dispatch(mostrarNotificacion(err.message, "error"))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const handlePausar = async (skin) => {
+    setError("")
+    setActionId(skin.id)
+    try {
+      const result = await dispatch(pausarPublicacion(skin.id)).unwrap()
+      dispatch(mostrarNotificacion(
+        result.message || "Publicacion pausada. Podés reactivarla desde Mis publicaciones.",
       ))
     } catch (err) {
       setError(err.message)
@@ -162,11 +187,13 @@ function MisPublicaciones({ goToLogin }) {
     setError("")
     setEditItem(skin)
     setEditPrice(String(skin.price ?? ""))
+    setEditDiscount(String(Math.round(Number(skin.discount ?? 0) * 100)))
   }
 
   const closeEdit = () => {
     if (saving) return
     setEditItem(null)
+    setEditDiscount("0")
   }
 
   const handleEditSubmit = async (event) => {
@@ -179,12 +206,19 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
+    const priceNumber = parseDecimalInput(editPrice)
+    const discountNumber = parseDecimalInput(editDiscount)
+    if (!Number.isFinite(discountNumber) || discountNumber < 0 || discountNumber > 100) {
+      setError("El descuento debe estar entre 0 y 100.")
+      return
+    }
+
     setSaving(true)
     try {
       await dispatch(editarPublicacion({
         skinId: editItem.id,
-        price: Number(editPrice),
-        discount: editItem.discount ?? 0,
+        price: priceNumber,
+        discount: discountNumber / 100,
         vendible: true,
         intercambiable: false,
       })).unwrap()
@@ -207,11 +241,27 @@ function MisPublicaciones({ goToLogin }) {
         <div className="pub-actions">
           <button
             type="button"
+            className="pub-btn pub-btn-edit"
+            disabled={disabled}
+            onClick={() => openEdit(skin)}
+          >
+            <FaPen /> Editar
+          </button>
+          <button
+            type="button"
             className="pub-btn pub-btn-play"
             disabled={disabled}
             onClick={() => handleActivar(skin)}
           >
             <FaPlay /> {disabled ? "..." : "Activar"}
+          </button>
+          <button
+            type="button"
+            className="pub-btn pub-btn-danger"
+            disabled={disabled}
+            onClick={() => handleDespublicar(skin)}
+          >
+            <FaTrash /> {disabled ? "..." : "Retirar"}
           </button>
         </div>
       )
@@ -232,9 +282,18 @@ function MisPublicaciones({ goToLogin }) {
           type="button"
           className="pub-btn pub-btn-pause"
           disabled={disabled}
+          onClick={() => handlePausar(skin)}
+        >
+          <FaPause /> {disabled ? "..." : "Pausar"}
+        </button>
+
+        <button
+          type="button"
+          className="pub-btn pub-btn-danger"
+          disabled={disabled}
           onClick={() => handleDespublicar(skin)}
         >
-          <FaPause /> {disabled ? "..." : "Retirar"}
+          <FaTrash /> {disabled ? "..." : "Retirar"}
         </button>
       </div>
     )
@@ -477,6 +536,22 @@ function MisPublicaciones({ goToLogin }) {
                 required
               />
             </label>
+
+            <label>
+              Descuento (%)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={editDiscount}
+                onChange={(e) => setEditDiscount(e.target.value)}
+              />
+            </label>
+
+            <p className="pub-modal-hint">
+              Precio final: {formatPrice((parseDecimalInput(editPrice) || 0) * (1 - ((parseDecimalInput(editDiscount) || 0) / 100)))}
+            </p>
 
             <button type="submit" className="pub-btn pub-btn-save" disabled={saving}>
               {saving ? "Guardando..." : "Guardar cambios"}

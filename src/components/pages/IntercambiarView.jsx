@@ -132,10 +132,11 @@ function IntercambiarView() {
             onClear={() => dispatch(clearExchangeSelection())}
             onSubmit={handleSubmitExchange}
           />
-          <div className="exchange-filter-box">
+          <details className="exchange-filter-box">
+            <summary className="exchange-filter-summary">Filtros y orden</summary>
             <CatalogToolbar />
             <CatalogFilters showAvailability={false} />
-          </div>
+          </details>
         </div>
 
         <ExchangeCatalogPanel

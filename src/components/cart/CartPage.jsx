@@ -1,7 +1,11 @@
 import { useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { setCheckoutCupon } from "../../Redux/appSlice"
+import {
+  clearCheckoutCuponValidation,
+  setCheckoutCupon,
+  validarCheckoutCupon,
+} from "../../Redux/appSlice"
 import { eliminarItemCarrito, vaciarCarrito } from "../../Redux/carritoSlice"
 import { resetCheckout } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
@@ -18,6 +22,11 @@ function CartPage() {
   const { data: carrito, loading, updating, error: cartError } = useSelector(
     (state) => state.carrito,
   )
+  const {
+    couponValidation,
+    couponStatus,
+    couponError,
+  } = useSelector((state) => state.app)
   const [error, setError] = useState("")
   const [cupon, setCupon] = useState("")
 
@@ -81,6 +90,26 @@ function CartPage() {
     navigate("/checkout")
   }
 
+  const handleCuponChange = (value) => {
+    setCupon(value)
+    dispatch(clearCheckoutCuponValidation())
+  }
+
+  const handleValidateCupon = async () => {
+    const normalizedCupon = cupon.trim()
+    if (!normalizedCupon) {
+      dispatch(clearCheckoutCuponValidation())
+      return
+    }
+
+    try {
+      await dispatch(validarCheckoutCupon(normalizedCupon)).unwrap()
+      dispatch(mostrarNotificacion("Cupón válido."))
+    } catch {
+      // El error del cupón se muestra junto al input desde Redux.
+    }
+  }
+
   return (
     <main className="cart-page">
       <section className="cart-header">
@@ -118,10 +147,14 @@ function CartPage() {
 
           <CartSummary
             cupon={cupon}
+            couponValidation={couponValidation}
+            couponStatus={couponStatus}
+            couponError={couponError}
             totals={cartTotals}
             tradeUrlIssue={tradeUrlIssue}
             updating={updating}
-            onCuponChange={setCupon}
+            onCuponChange={handleCuponChange}
+            onValidateCupon={handleValidateCupon}
             onCheckout={handleCheckout}
             onCompleteProfile={() => navigate("/perfil")}
           />

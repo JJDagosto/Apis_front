@@ -11,6 +11,18 @@ const getUnavailableLabel = (item) => {
   return null
 }
 
+const getSteamInventoryPrice = (item) => {
+  if (item.steamPriceAvailable === false) return null
+
+  const estimatedPrice = Number(item.estimatedPrice)
+  if (!Number.isFinite(estimatedPrice)) return null
+
+  // Evita mostrar el fallback tecnico de 1 USD como si fuera cotizacion real.
+  if (item.steamPriceAvailable !== true && estimatedPrice <= 1.01) return null
+
+  return estimatedPrice
+}
+
 function ExchangeInventoryPanel({
   currentUser,
   items,
@@ -95,7 +107,7 @@ function ExchangeInventoryPanel({
                 title={item.name}
                 weapon={item.catalogo?.weaponName}
                 exterior={item.catalogo?.exteriorName}
-                price={item.estimatedPrice ?? item.catalogo?.estimatedPrice ?? item.catalogo?.price}
+                price={getSteamInventoryPrice(item)}
                 status="Inventario"
                 selected={selectedIds.includes(String(item.id))}
                 disabled={Boolean(unavailableLabel)}

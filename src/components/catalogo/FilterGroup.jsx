@@ -2,7 +2,7 @@ import { FaChevronDown } from "react-icons/fa"
 
 function FilterGroup({ title, activeCount = 0, children }) {
   return (
-    <details className="filter-group" open>
+    <details className="filter-group">
       <summary>
         <span>{title}</span>
         {activeCount > 0 && <em>{activeCount}</em>}

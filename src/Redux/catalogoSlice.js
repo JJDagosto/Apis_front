@@ -1,11 +1,13 @@
 import { createAsyncThunk, createSelector, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
+import { DEFAULT_USD_TO_ARS } from "../utils/currency"
 import { limpiarNombreSkin } from "../utils/skinFormat"
 import {
   activarPublicacion,
   cancelarPagoPendiente,
   despublicarPublicacion,
   editarPublicacion,
+  pausarPublicacion,
 } from "./publicacionesSlice"
 import { publicarInventarioItem } from "./inventarioSlice"
 import {
@@ -47,14 +49,59 @@ export const fetchCatalogo = createAsyncThunk(
 )
 
 const initialFilters = {
-  exterior: "",
-  rareza: "",
-  arma: "",
+  exterior: [],
+  rareza: [],
+  arma: [],
   precioMin: "",
   precioMax: "",
   intercambiable: false,
   vendible: false,
 }
+
+const toggleFilterValue = (currentValue, value) => {
+  const selectedValues = Array.isArray(currentValue)
+    ? currentValue
+    : currentValue
+      ? [currentValue]
+      : []
+
+  return selectedValues.includes(value)
+    ? selectedValues.filter((selectedValue) => selectedValue !== value)
+    : [...selectedValues, value]
+}
+
+const matchesSelectedValues = (selectedValues, value) => {
+  const values = Array.isArray(selectedValues)
+    ? selectedValues
+    : selectedValues
+      ? [selectedValues]
+      : []
+
+  return values.length === 0 || values.includes(value)
+}
+
+const displayPriceToUsd = (value, currency, rate) => {
+  if (value === "") return null
+  const cleanValue = String(value)
+    .replace(/[^\d,.-]/g, "")
+    .trim()
+  if (!cleanValue) return null
+
+  const comma = cleanValue.lastIndexOf(",")
+  const dot = cleanValue.lastIndexOf(".")
+  const normalizedValue = comma > dot
+    ? cleanValue.replace(/\./g, "").replace(",", ".")
+    : cleanValue.replace(/,/g, "")
+  const numericValue = Number(normalizedValue)
+  if (!Number.isFinite(numericValue)) return null
+  return currency === "ARS"
+    ? numericValue / (Number(rate) || DEFAULT_USD_TO_ARS)
+    : numericValue
+}
+
+const getSkinPrice = (skin) => Number(
+  skin.estimatedTradePrice ?? skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0,
+)
 
 const catalogoSlice = createSlice({
   name: "catalogo",
@@ -70,8 +117,7 @@ const catalogoSlice = createSlice({
   reducers: {
     setCatalogFilter: (state, action) => {
       const { filterName, value } = action.payload
-      state.filters[filterName] =
-        state.filters[filterName] === value ? "" : value
+      state.filters[filterName] = toggleFilterValue(state.filters[filterName], value)
     },
     setCatalogPriceFilter: (state, action) => {
       const { filterName, value } = action.payload
@@ -120,6 +166,13 @@ const catalogoSlice = createSlice({
         }
       })
       .addCase(despublicarPublicacion.fulfilled, (state, action) => {
+        const skin = state.items.find((item) => item.id === action.payload.skinId)
+        if (skin) {
+          skin.active = false
+          skin.estadoPublicacion = "PAUSADA"
+        }
+      })
+      .addCase(pausarPublicacion.fulfilled, (state, action) => {
         const skin = state.items.find((item) => item.id === action.payload.skinId)
         if (skin) {
           skin.active = false
@@ -183,30 +236,35 @@ export const selectFilteredCatalogItems = createSelector(
     selectCatalogFilters,
     selectCatalogSearchTerm,
     selectCatalogSortOrder,
+    (state) => state.app.currency,
+    (state) => Number(state.auth.currentUser?.usdToArs ?? DEFAULT_USD_TO_ARS),
   ],
-  (items, filters, searchTerm, sortOrder) => {
+  (items, filters, searchTerm, sortOrder, currency, rate) => {
     const termino = (searchTerm ?? "").trim().toLowerCase()
+    const precioMinUsd = displayPriceToUsd(filters.precioMin, currency, rate)
+    const precioMaxUsd = displayPriceToUsd(filters.precioMax, currency, rate)
 
     const filteredItems = items.filter((skin) => {
+      const skinPrice = getSkinPrice(skin)
       const cumpleBusqueda =
         termino === "" ||
         (skin.name ?? "").toLowerCase().includes(termino) ||
         (skin.catalogo?.weaponName ?? "").toLowerCase().includes(termino)
 
       const cumpleExterior =
-        !filters.exterior || skin.catalogo?.exteriorName === filters.exterior
+        matchesSelectedValues(filters.exterior, skin.catalogo?.exteriorName)
 
       const cumpleRareza =
-        !filters.rareza || skin.catalogo?.rarezaName === filters.rareza
+        matchesSelectedValues(filters.rareza, skin.catalogo?.rarezaName)
 
       const cumpleArma =
-        !filters.arma || skin.catalogo?.weaponName === filters.arma
+        matchesSelectedValues(filters.arma, skin.catalogo?.weaponName)
 
       const cumplePrecioMin =
-        filters.precioMin === "" || skin.price >= Number(filters.precioMin)
+        precioMinUsd === null || skinPrice >= precioMinUsd
 
       const cumplePrecioMax =
-        filters.precioMax === "" || skin.price <= Number(filters.precioMax)
+        precioMaxUsd === null || skinPrice <= precioMaxUsd
 
       const cumpleIntercambiable =
         !filters.intercambiable ||
@@ -229,9 +287,9 @@ export const selectFilteredCatalogItems = createSelector(
     return filteredItems.slice().sort((a, b) => {
       switch (sortOrder) {
         case "precio_asc":
-          return (a.price ?? 0) - (b.price ?? 0)
+          return getSkinPrice(a) - getSkinPrice(b)
         case "precio_desc":
-          return (b.price ?? 0) - (a.price ?? 0)
+          return getSkinPrice(b) - getSkinPrice(a)
         case "nombre_az":
           return limpiarNombreSkin(a.name).localeCompare(limpiarNombreSkin(b.name))
         case "nombre_za":
@@ -246,7 +304,7 @@ export const selectFilteredCatalogItems = createSelector(
 export const selectExchangeCatalogItems = createSelector(
   [selectFilteredCatalogItems],
   (items) => items.filter((skin) =>
-    skin.intercambiable === true && skin.vendible !== true),
+    skin.intercambiable === true || skin.vendible === true),
 )
 
 export default catalogoSlice.reducer

@@ -18,14 +18,6 @@ export const getResetPasswordError = (password, passwordRepeat) => {
   return ""
 }
 
-export const getSteamId64Error = (steamId64) => {
-  if (steamId64.trim() && !/^\d{17}$/.test(steamId64.trim())) {
-    return "SteamID64 debe ser un número de 17 dígitos."
-  }
-
-  return ""
-}
-
 export const getTradeUrlError = (tradeUrl) => {
   if (tradeUrl.trim() && !isValidSteamTradeUrl(tradeUrl)) {
     return "Steam Trade URL debe ser un link válido de Steam con partner y token."
@@ -35,7 +27,7 @@ export const getTradeUrlError = (tradeUrl) => {
 }
 
 export const getPositivePriceError = (price) => {
-  const parsedPrice = Number(price)
+  const parsedPrice = Number(String(price).replace(",", "."))
   if (!parsedPrice || parsedPrice <= 0) return "El precio debe ser mayor a 0."
   return ""
 }
@@ -49,7 +41,7 @@ export const getPublicationAvailabilityError = (vendible, intercambiable) => {
 }
 
 export const getPercentRangeError = (value, label = "El descuento") => {
-  const parsedValue = Number(value)
+  const parsedValue = Number(String(value).replace(",", "."))
   if (!parsedValue || parsedValue <= 0 || parsedValue > 100) {
     return `${label} debe estar entre 1 y 100.`
   }

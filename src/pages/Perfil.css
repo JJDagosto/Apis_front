@@ -103,6 +103,21 @@
   margin-bottom: 6px;
 }
 
+.profile-steam-link {
+  align-items: center;
+  background: #ffca2c;
+  border: 1px solid #ffca2c;
+  border-radius: 6px;
+  color: #0c0524;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0 4px;
+  min-height: 42px;
+  padding: 0 16px;
+}
+
 .trade-url-guide {
   background-color: rgba(255, 202, 44, 0.08);
   border: 1px solid rgba(255, 202, 44, 0.22);

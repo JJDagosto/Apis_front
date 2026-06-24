@@ -24,7 +24,7 @@ function SalesNotificationBell() {
 
   useEffect(() => {
     const refreshNotifications = () => {
-      dispatch(fetchSalesNotifications({ force: true }))
+      dispatch(fetchSalesNotifications())
     }
     const refreshWhenVisible = () => {
       if (!document.hidden) refreshNotifications()
@@ -42,7 +42,7 @@ function SalesNotificationBell() {
     const nextOpen = !open
     setOpen(nextOpen)
     if (nextOpen) {
-      await dispatch(fetchSalesNotifications({ force: true }))
+      await dispatch(fetchSalesNotifications())
       dispatch(markSalesNotificationsRead())
     }
   }

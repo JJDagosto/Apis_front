@@ -263,7 +263,10 @@ select {
 
 .catalog-exchange-page {
   color: white;
-  padding: 24px 24px 56px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 98px);
+  padding: 24px 24px;
 }
 
 .catalog-exchange-page .catalog-mode-tabs {
@@ -273,8 +276,10 @@ select {
 
 .exchange-layout {
   display: grid;
+  flex: 1 1 auto;
   gap: 20px;
-  grid-template-columns: minmax(280px, 1fr) minmax(220px, 280px) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 300px) minmax(0, 1.2fr);
+  min-height: 0;
 }
 
 .exchange-panel,
@@ -289,8 +294,8 @@ select {
   border-top: 3px solid rgba(123, 97, 255, 0.7);
   display: flex;
   flex-direction: column;
-  height: clamp(560px, calc(100vh - 220px), 760px);
-  min-height: 0;
+  height: auto;
+  min-height: calc(100vh - 210px);
   overflow: hidden;
 }
 
@@ -455,7 +460,7 @@ select {
 }
 
 .exchange-item-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
 }
 
 .exchange-item-card {
@@ -467,9 +472,9 @@ select {
   cursor: pointer;
   display: grid;
   gap: 12px;
-  grid-template-rows: 92px minmax(108px, 1fr);
+  grid-template-rows: 118px minmax(154px, 1fr);
   min-width: 0;
-  min-height: 238px;
+  min-height: 296px;
   overflow: hidden;
   padding: 12px;
   position: relative;
@@ -543,21 +548,21 @@ select {
 .exchange-item-image {
   align-items: center;
   display: flex;
-  height: 92px;
+  height: 118px;
   justify-content: center;
   min-height: 0;
 }
 
 .exchange-item-image img {
-  max-height: 92px;
+  max-height: 118px;
   max-width: 100%;
   object-fit: contain;
 }
 
 .exchange-item-copy {
   display: grid;
-  gap: 2px;
-  grid-template-rows: 18px minmax(36px, auto) 20px 26px;
+  gap: 5px;
+  grid-template-rows: 18px minmax(44px, auto) 24px 28px;
   min-width: 0;
 }
 
@@ -582,14 +587,14 @@ select {
 }
 
 .exchange-item-price {
-  align-self: end;
+  align-self: center;
   color: #ffca2c;
   display: block;
   font-size: 1rem;
   font-weight: 900;
   line-height: 1.2;
   margin: 0;
-  padding-top: 5px;
+  padding-top: 0;
 }
 
 .exchange-item-price.unavailable {
@@ -717,6 +722,45 @@ select {
 
 .exchange-filter-box {
   padding: 16px;
+}
+
+.exchange-filter-box[open] {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.exchange-filter-summary {
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  font-weight: 900;
+  justify-content: space-between;
+  list-style: none;
+  min-height: 28px;
+}
+
+.exchange-filter-summary::-webkit-details-marker {
+  display: none;
+}
+
+.exchange-filter-summary::after {
+  color: #ffca2c;
+  content: "Abrir";
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.exchange-filter-box[open] .exchange-filter-summary {
+  background: #171225;
+  margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.exchange-filter-box[open] .exchange-filter-summary::after {
+  content: "Cerrar";
 }
 
 .exchange-filter-box .catalog-results-toolbar {

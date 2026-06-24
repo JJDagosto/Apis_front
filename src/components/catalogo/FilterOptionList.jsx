@@ -2,9 +2,14 @@ import { FaCheck } from "react-icons/fa"
 import FilterGroup from "./FilterGroup.jsx"
 
 function FilterOptionList({ title, filterName, filters, options, onSelect }) {
+  const selectedValues = Array.isArray(filters[filterName])
+    ? filters[filterName]
+    : filters[filterName]
+      ? [filters[filterName]]
+      : []
   const filterClass = (value) =>
-    filters[filterName] === value ? "filter-item active" : "filter-item"
-  const activeCount = filters[filterName] ? 1 : 0
+    selectedValues.includes(value) ? "filter-item active" : "filter-item"
+  const activeCount = selectedValues.length
 
   return (
     <FilterGroup title={title} activeCount={activeCount}>
@@ -17,7 +22,7 @@ function FilterOptionList({ title, filterName, filters, options, onSelect }) {
               onClick={() => onSelect(filterName, option.value)}
             >
               <span>{option.label}</span>
-              {filters[filterName] === option.value && <FaCheck aria-hidden="true" />}
+              {selectedValues.includes(option.value) && <FaCheck aria-hidden="true" />}
             </button>
           </li>
         ))}

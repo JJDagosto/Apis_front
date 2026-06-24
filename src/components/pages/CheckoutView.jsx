@@ -21,7 +21,7 @@ const getConfirmedTradeStatus = (tradeStatus) => {
   if (tradeStatus === "PREPARING_TRADE") return "Preparando intercambio"
   if (tradeStatus === "BOT_SENT") return "Oferta de intercambio enviada"
   if (tradeStatus === "COMPLETED") return "Intercambio completado"
-  return "Pago confirmado · Preparando entrega"
+  return "Pago confirmado - Preparando entrega"
 }
 
 function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {

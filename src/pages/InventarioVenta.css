@@ -215,6 +215,28 @@
   margin: 0;
 }
 
+.publish-price-hint,
+.publish-final-price {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+}
+
+.publish-price-hint span,
+.publish-final-price span {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.publish-price-hint strong,
+.publish-final-price strong {
+  color: #ffca2c;
+}
+
 .publish-modal label {
   display: flex;
   flex-direction: column;

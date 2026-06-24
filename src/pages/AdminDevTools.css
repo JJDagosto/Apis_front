@@ -5,7 +5,7 @@
 }
 
 .admin-dev-panel {
-  max-width: 1160px;
+  max-width: min(1680px, calc(100vw - 48px));
   margin: 0 auto;
 }
 
@@ -88,13 +88,13 @@
   align-items: start;
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 420px);
 }
 
 .admin-dev-results {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
 
 .catalog-result {
@@ -201,7 +201,7 @@
 .admin-stats {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   margin-bottom: 20px;
 }
 
@@ -236,7 +236,7 @@
   align-items: start;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(380px, 0.8fr);
   grid-template-areas:
     "publicaciones resumen"
     "publicaciones reclamos"
@@ -312,7 +312,7 @@
 }
 
 .admin-catalog-results {
-  max-height: 360px;
+  max-height: 460px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -339,7 +339,7 @@
 }
 
 .admin-row {
-  grid-template-columns: 54px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(92px, auto) auto auto;
 }
 
 .admin-claim-row {
@@ -349,7 +349,7 @@
 .admin-row img {
   aspect-ratio: 1;
   object-fit: contain;
-  width: 54px;
+  width: 64px;
 }
 
 .admin-row strong,

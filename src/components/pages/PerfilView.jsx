@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { updateCurrentUser } from "../../Redux/authSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
-import { getSteamId64Error, getTradeUrlError } from "../../utils/validations.jsx"
+import { getTradeUrlError } from "../../utils/validations.jsx"
+import SteamLoginButton from "../SteamLoginButton.jsx"
 import "../../pages/Perfil.css"
 
 const emptyProfile = {
@@ -11,7 +12,6 @@ const emptyProfile = {
   email: "",
   firstName: "",
   lastName: "",
-  steamId64: "",
   tradeUrl: "",
   aliasCobro: "",
   password: "",
@@ -34,7 +34,6 @@ function Perfil({ goToLogin }) {
       email: currentUser.email ?? "",
       firstName: currentUser.firstName ?? "",
       lastName: currentUser.lastName ?? "",
-      steamId64: currentUser.steamId64 ?? "",
       tradeUrl: currentUser.tradeUrl ?? "",
       aliasCobro: currentUser.aliasCobro ?? currentUser.aliasMercadoPago ?? "",
       password: "",
@@ -64,12 +63,6 @@ function Perfil({ goToLogin }) {
     event.preventDefault()
     setError("")
 
-    const steamIdError = getSteamId64Error(form.steamId64)
-    if (steamIdError) {
-      setError(steamIdError)
-      return
-    }
-
     const tradeUrlError = getTradeUrlError(form.tradeUrl)
     if (tradeUrlError) {
       setError(tradeUrlError)
@@ -86,7 +79,6 @@ function Perfil({ goToLogin }) {
         email: form.email.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        steamId64: form.steamId64.trim(),
         tradeUrl: form.tradeUrl.trim(),
         aliasCobro: form.aliasCobro.trim(),
       }
@@ -173,21 +165,17 @@ function Perfil({ goToLogin }) {
 
           <div className="steam-section">
             <h2>Steam</h2>
+            {!currentUser.steamId64 && (
+              <SteamLoginButton
+                className="profile-steam-link"
+                label="Vincular cuenta de Steam"
+              />
+            )}
             <p>
-              El login con Steam carga tu SteamID64 para sincronizar inventario. La Trade URL no la expone Steam por OpenID, por eso se carga manualmente.
+              El login con Steam carga tu cuenta automáticamente. La Trade URL no la expone Steam por OpenID, por eso se carga manualmente.
             </p>
 
             <div className="profile-grid">
-              <label>
-                SteamID64
-                <input
-                  type="text"
-                  value={form.steamId64}
-                  onChange={(event) => updateField("steamId64", event.target.value)}
-                  placeholder="7656119..."
-                />
-              </label>
-
               <label>
                 Trade URL
                 <input

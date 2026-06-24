@@ -8,15 +8,14 @@ import {
   FaSteam,
   FaTags,
 } from "react-icons/fa"
+import { useMemo } from "react"
+import { useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
 import heroLoot from "../../images/logo.png"
 import glow from "../../images/image.png"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
+import { limpiarNombreSkin } from "../../utils/skinFormat"
 import "../../pages/Home.css"
-
-const featuredSkins = [
-  { weapon: "AK-47", name: "Redline", price: "$549.99", tag: "Popular" },
-  { weapon: "AWP", name: "Asiimov", price: "$1599.99", tag: "Hot" },
-  { weapon: "M4A1-S", name: "Printstream", price: "$1749.99", tag: "Premium" },
-]
 
 const trustItems = [
   { icon: <FaShieldAlt />, title: "Operaciones claras", text: "Publicaciones, carrito y perfil en un flujo simple para comprar sin perder contexto." },
@@ -25,6 +24,29 @@ const trustItems = [
 ]
 
 function Home({ goToCatalogo, goToSell, goToInfo, currentUser }) {
+  const { formatPrice } = useCurrencyFormatter()
+  const navigate = useNavigate()
+  const catalogItems = useSelector((state) => state.catalogo.items)
+  const getFeaturedPrice = (skin) =>
+    Number(skin.estimatedTradePrice ?? skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0)
+  const featuredSkins = useMemo(() => (
+    catalogItems
+      .filter((skin) => skin.active !== false)
+      .filter((skin) => !skin.estadoPublicacion || skin.estadoPublicacion === "PUBLICADA")
+      .filter((skin) => Number(skin.stock ?? 1) > 0)
+      .slice()
+      .sort((a, b) => getFeaturedPrice(b) - getFeaturedPrice(a))
+      .slice(0, 3)
+      .map((skin, index) => ({
+        id: skin.id,
+        weapon: skin.catalogo?.weaponName ?? "CS2",
+        name: limpiarNombreSkin(skin.name),
+        price: formatPrice(getFeaturedPrice(skin)),
+        imageUrl: skin.imageUrl ?? skin.catalogo?.imageUrl,
+        tag: ["Popular", "Hot", "Premium"][index] ?? "Market",
+      }))
+  ), [catalogItems, formatPrice])
+
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -91,12 +113,18 @@ function Home({ goToCatalogo, goToSell, goToInfo, currentUser }) {
 
         <div className="home-featured-grid">
           {featuredSkins.map((skin) => (
-            <article className="home-skin-card" key={`${skin.weapon}-${skin.name}`}>
+            <button
+              className="home-skin-card"
+              key={skin.id ?? `${skin.weapon}-${skin.name}`}
+              type="button"
+              onClick={() => navigate(`/publicacion/${skin.id}`)}
+            >
               <span>{skin.tag}</span>
+              {skin.imageUrl && <img src={skin.imageUrl} alt="" />}
               <h3>{skin.weapon}</h3>
               <p>{skin.name}</p>
               <strong>{skin.price}</strong>
-            </article>
+            </button>
           ))}
         </div>
       </section>

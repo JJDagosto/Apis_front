@@ -15,11 +15,13 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
 import { getPositivePriceError } from "../../utils/validations.jsx"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import "../../pages/InventarioVenta.css"
 
 function InventarioVenta({ goToLogin, goToPerfil }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { currency, rate, formatPrice } = useCurrencyFormatter()
   const openLogin = goToLogin ?? (() => navigate("/login"))
   const openPerfil = goToPerfil ?? (() => navigate("/perfil"))
   const currentUser = useSelector((state) => state.auth.currentUser)
@@ -36,13 +38,14 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const loading = status === "loading"
   const [selectedItem, setSelectedItem] = useState(null)
   const [price, setPrice] = useState("")
+  const [discount, setDiscount] = useState("0")
   const [error, setError] = useState("")
 
   useEffect(() => {
     if (currentUser) {
-      dispatch(fetchInventario({ force: true }))
-      dispatch(fetchMisPublicaciones({ force: true }))
-      dispatch(fetchSalesNotifications({ force: true }))
+      dispatch(fetchInventario())
+      dispatch(fetchMisPublicaciones())
+      dispatch(fetchSalesNotifications())
     }
   }, [currentUser, dispatch])
 
@@ -61,6 +64,26 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const cs2Items = items.filter((item) => item.catalogo)
   const sellingSetupIssues = getSellingSetupIssues(currentUser)
   const canSellFromProfile = sellingSetupIssues.length === 0
+
+  const getSuggestedPriceUsd = (item) => (
+    Number(item?.estimatedPrice ?? item?.catalogo?.estimatedPrice ?? 0) || 0
+  )
+
+  const formatInputPrice = (priceUsd) => {
+    if (!priceUsd) return ""
+    const displayValue = currency === "ARS" ? priceUsd * rate : priceUsd
+    return displayValue.toFixed(2)
+  }
+
+  const inputPriceToUsd = (value) => {
+    const numericValue = Number(String(value).replace(",", "."))
+    if (!Number.isFinite(numericValue)) return 0
+    return currency === "ARS" ? numericValue / rate : numericValue
+  }
+
+  const selectedPriceUsd = inputPriceToUsd(price)
+  const selectedDiscountRate = Math.max(0, Math.min(Number(String(discount).replace(",", ".")) || 0, 100)) / 100
+  const selectedFinalPriceUsd = selectedPriceUsd * (1 - selectedDiscountRate)
 
   const handleSync = async () => {
     setError("")
@@ -83,7 +106,8 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
     }
 
     setSelectedItem(item)
-    setPrice("")
+    setPrice(formatInputPrice(getSuggestedPriceUsd(item)))
+    setDiscount("0")
     setError("")
   }
 
@@ -91,6 +115,7 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
     if (publishing) return
     setSelectedItem(null)
     setPrice("")
+    setDiscount("0")
   }
 
   const handlePublish = async (event) => {
@@ -107,11 +132,17 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
       setError(priceError)
       return
     }
+    const discountNumber = Number(String(discount).replace(",", "."))
+    if (!Number.isFinite(discountNumber) || discountNumber < 0 || discountNumber > 100) {
+      setError("El descuento debe estar entre 0 y 100.")
+      return
+    }
 
     try {
       const result = await dispatch(publicarInventarioItem({
         itemId: selectedItem.id,
-        price: Number(price),
+        price: inputPriceToUsd(price),
+        discount: discountNumber / 100,
         vendible: true,
         intercambiable: false,
       })).unwrap()
@@ -120,6 +151,7 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
       ))
       setSelectedItem(null)
       setPrice("")
+      setDiscount("0")
     } catch (error) {
       setError(error.message)
       dispatch(mostrarNotificacion(error.message, "error"))
@@ -218,7 +250,7 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
         <section className="inventory-empty-state">
           <h2>No encontramos skins de CS2 publicables</h2>
           <p>
-            Verificá que tu SteamID64 esté configurado, que tu inventario sea público y que hayas sincronizado el inventario.
+            Verificá que hayas iniciado sesión con Steam, que tu inventario sea público y que hayas sincronizado el inventario.
           </p>
         </section>
       )}
@@ -277,9 +309,15 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
 
             <h2>Publicar skin</h2>
             <p className="publish-item-name">{selectedItem.name}</p>
+            {getSuggestedPriceUsd(selectedItem) > 0 && (
+              <div className="publish-price-hint">
+                <span>Precio sugerido Steam -8%</span>
+                <strong>{formatPrice(getSuggestedPriceUsd(selectedItem))}</strong>
+              </div>
+            )}
 
             <label>
-              Precio de publicación
+              Precio de publicación ({currency})
               <input
                 type="number"
                 min="0.01"
@@ -291,6 +329,25 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
                 required
               />
             </label>
+
+            <label>
+              Descuento adicional (%)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={discount}
+                onChange={(event) => setDiscount(event.target.value)}
+              />
+            </label>
+
+            {selectedPriceUsd > 0 && (
+              <div className="publish-final-price">
+                <span>Precio final publicado</span>
+                <strong>{formatPrice(selectedFinalPriceUsd)}</strong>
+              </div>
+            )}
 
             <div className="publish-warning">
               <strong>Antes de publicar</strong>

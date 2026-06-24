@@ -8,6 +8,13 @@ const notificacionesSlice = createSlice({
   reducers: {
     mostrarNotificacion: {
       reducer: (state, action) => {
+        const duplicate = state.items.find((item) =>
+          item.message === action.payload.message &&
+          item.type === action.payload.type)
+        if (duplicate) {
+          duplicate.duration = action.payload.duration
+          return
+        }
         state.items.push(action.payload)
       },
       prepare: (message, type = "success", duration = 4000) => ({

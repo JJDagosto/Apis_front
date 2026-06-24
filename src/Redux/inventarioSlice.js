@@ -68,7 +68,22 @@ const inventarioSlice = createSlice({
     publishing: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    marcarInventarioItemDisponible: (state, action) => {
+      const { itemId, steamAssetId, catalogoId, name } = action.payload ?? {}
+      const item = state.items.find((inventoryItem) => (
+        (itemId && inventoryItem.id === itemId) ||
+        (steamAssetId && inventoryItem.assetId === steamAssetId) ||
+        (catalogoId && inventoryItem.catalogo?.id === catalogoId) ||
+        (name && inventoryItem.name === name)
+      ))
+
+      if (item) {
+        item.publicado = false
+        item.pending = false
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchInventario.pending, (state) => {
@@ -122,5 +137,7 @@ const inventarioSlice = createSlice({
       })
   },
 })
+
+export const { marcarInventarioItemDisponible } = inventarioSlice.actions
 
 export default inventarioSlice.reducer

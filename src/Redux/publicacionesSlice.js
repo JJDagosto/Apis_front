@@ -110,6 +110,18 @@ export const despublicarPublicacion = createAsyncThunk(
   },
 )
 
+export const pausarPublicacion = createAsyncThunk(
+  "publicaciones/pausarPublicacion",
+  async (skinId, { getState }) => {
+    const response = await apiRequest(
+      `/skins/${skinId}/pausar`,
+      { method: "PUT" },
+      getToken(getState),
+    )
+    return { skinId, message: response.message }
+  },
+)
+
 export const activarPublicacion = createAsyncThunk(
   "publicaciones/activarPublicacion",
   async (skinId, { getState }) => {
@@ -221,6 +233,12 @@ const publicacionesSlice = createSlice({
       .addCase(despublicarPublicacion.fulfilled, (state, action) => {
         state.items = state.items.filter((skin) => skin.id !== action.payload.skinId)
         state.historial = state.historial.filter((skin) => skin.id !== action.payload.skinId)
+      })
+      .addCase(pausarPublicacion.fulfilled, (state, action) => {
+        updateSkin(state.items, action.payload.skinId, {
+          active: false,
+          estadoPublicacion: "PAUSADA",
+        })
       })
       .addCase(activarPublicacion.fulfilled, (state, action) => {
         const changes = { active: true, estadoPublicacion: "PUBLICADA" }

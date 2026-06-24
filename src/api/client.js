@@ -25,7 +25,14 @@ export const apiRequest = async (path, options = {}, tokenOverride) => {
   })
 
   const text = await response.text()
-  const json = text ? JSON.parse(text) : null
+  let json = null
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      json = { message: text }
+    }
+  }
 
   if (!response.ok) {
     throw new Error(json?.message || "Ocurrió un error con la solicitud.")
