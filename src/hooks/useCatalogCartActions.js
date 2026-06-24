@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
-import { resetCheckout } from "../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 
@@ -54,8 +53,6 @@ export const useCatalogCartActions = () => {
         await dispatch(agregarAlCarrito(skinId)).unwrap()
         dispatch(mostrarNotificacion("Ítem agregado al carrito con éxito."))
       }
-
-      dispatch(resetCheckout())
     } catch (cartError) {
       setError(cartError.message)
       dispatch(mostrarNotificacion(cartError.message, "error"))
