@@ -12,14 +12,11 @@ const getUnavailableLabel = (item) => {
 }
 
 const getSteamInventoryPrice = (item) => {
-  if (item.steamPriceAvailable === false) return null
-
+  if (item.estimatedPrice === null || item.estimatedPrice === undefined || item.estimatedPrice === "") {
+    return null
+  }
   const estimatedPrice = Number(item.estimatedPrice)
-  if (!Number.isFinite(estimatedPrice)) return null
-
-  // Evita mostrar el fallback tecnico de 1 USD como si fuera cotizacion real.
-  if (item.steamPriceAvailable !== true && estimatedPrice <= 1.01) return null
-
+  if (!Number.isFinite(estimatedPrice) || estimatedPrice <= 0) return null
   return estimatedPrice
 }
 

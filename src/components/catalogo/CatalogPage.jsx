@@ -33,7 +33,7 @@ function CatalogPage() {
       <div className="container-fluid">
         <div className="row">
           <div className="col-sm-3">
-            <CatalogFilters />
+            <CatalogFilters showAvailability={false} />
           </div>
 
           <div className="col-sm-9">
