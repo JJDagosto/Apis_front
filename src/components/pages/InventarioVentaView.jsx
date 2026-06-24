@@ -1,16 +1,11 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { FaPen, FaSyncAlt, FaTag, FaTimes } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import {
-  fetchInventario,
   publicarInventarioItem,
   sincronizarInventario,
 } from "../../Redux/inventarioSlice"
-import {
-  fetchMisPublicaciones,
-  fetchSalesNotifications,
-} from "../../Redux/publicacionesSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
@@ -40,14 +35,6 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const [price, setPrice] = useState("")
   const [discount, setDiscount] = useState("0")
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    if (currentUser) {
-      dispatch(fetchInventario())
-      dispatch(fetchMisPublicaciones())
-      dispatch(fetchSalesNotifications())
-    }
-  }, [currentUser, dispatch])
 
   if (!currentUser) {
     return (

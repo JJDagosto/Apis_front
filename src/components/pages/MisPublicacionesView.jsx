@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { FaCreditCard, FaPen, FaPause, FaPlay, FaTimes, FaTrash } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
@@ -8,9 +8,6 @@ import {
   cancelarPagoPendiente,
   despublicarPublicacion,
   editarPublicacion,
-  fetchDetallePublicaciones,
-  fetchMisPublicaciones,
-  fetchSalesNotifications,
   pausarPublicacion,
 } from "../../Redux/publicacionesSlice"
 import { resetCheckout, retomarCheckoutPendiente } from "../../Redux/checkoutSlice"
@@ -100,15 +97,6 @@ function MisPublicaciones({ goToLogin }) {
   const [editDiscount, setEditDiscount] = useState("0")
   const [saving, setSaving] = useState(false)
   const [pendingActionId, setPendingActionId] = useState(null)
-
-  useEffect(() => {
-    if (currentUser) {
-      dispatch(fetchMisPublicaciones())
-      dispatch(fetchDetallePublicaciones())
-      dispatch(fetchSalesNotifications())
-      dispatch(fetchMisOperaciones())
-    }
-  }, [currentUser, dispatch])
 
   if (!currentUser) {
     return (
@@ -498,7 +486,7 @@ function MisPublicaciones({ goToLogin }) {
             <ExchangeOperationsSection
               operations={intercambios}
               loading={operationsStatus === "loading"}
-              onRefresh={() => dispatch(fetchMisOperaciones({ force: true }))}
+              onRefresh={() => dispatch(fetchMisOperaciones())}
             />
 
             <section className="pub-section">

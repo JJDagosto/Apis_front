@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { fetchInventario, sincronizarInventario } from "../../Redux/inventarioSlice"
+import { sincronizarInventario } from "../../Redux/inventarioSlice"
 import {
   clearExchangeSelection,
   cotizarIntercambio,
@@ -49,12 +49,6 @@ function IntercambiarView() {
     requestedSkinIds.length > 0 &&
     quoteStatus === "succeeded" &&
     Number(quote?.saldoFaltante ?? 0) === 0
-
-  useEffect(() => {
-    if (currentUser) {
-      dispatch(fetchInventario())
-    }
-  }, [currentUser, dispatch])
 
   useEffect(() => {
     if (

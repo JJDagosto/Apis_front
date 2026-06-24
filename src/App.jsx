@@ -30,7 +30,10 @@ import { resetAppSession } from './Redux/appSlice'
 import { logout } from './Redux/authSlice'
 import { fetchCarrito } from './Redux/carritoSlice'
 import { fetchCatalogo } from './Redux/catalogoSlice'
+import { fetchInventario } from './Redux/inventarioSlice'
+import { fetchMisOperaciones } from './Redux/intercambioSlice'
 import {
+  fetchDetallePublicaciones,
   fetchMisPublicaciones,
   fetchSalesNotifications,
 } from './Redux/publicacionesSlice'
@@ -75,8 +78,11 @@ function App() {
     if (!currentUser) return
 
     dispatch(fetchCarrito())
+    dispatch(fetchInventario())
     dispatch(fetchMisPublicaciones())
+    dispatch(fetchDetallePublicaciones())
     dispatch(fetchSalesNotifications())
+    dispatch(fetchMisOperaciones())
   }, [currentUser, dispatch])
 
   const handleLogout = () => {

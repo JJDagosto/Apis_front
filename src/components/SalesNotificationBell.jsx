@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { FaBell } from "react-icons/fa"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import {
-  fetchSalesNotifications,
-  markSalesNotificationsRead,
-} from "../Redux/publicacionesSlice"
+import { markSalesNotificationsRead } from "../Redux/publicacionesSlice"
 import useCurrencyFormatter from "../hooks/useCurrencyFormatter"
 import { limpiarNombreSkin } from "../utils/skinFormat"
 
@@ -22,27 +19,10 @@ function SalesNotificationBell() {
     (sale) => !readIds.has(`${sale.orderId}-${sale.skinId}`),
   ).length
 
-  useEffect(() => {
-    const refreshNotifications = () => {
-      dispatch(fetchSalesNotifications())
-    }
-    const refreshWhenVisible = () => {
-      if (!document.hidden) refreshNotifications()
-    }
-
-    window.addEventListener("focus", refreshNotifications)
-    document.addEventListener("visibilitychange", refreshWhenVisible)
-    return () => {
-      window.removeEventListener("focus", refreshNotifications)
-      document.removeEventListener("visibilitychange", refreshWhenVisible)
-    }
-  }, [dispatch])
-
-  const toggleNotifications = async () => {
+  const toggleNotifications = () => {
     const nextOpen = !open
     setOpen(nextOpen)
     if (nextOpen) {
-      await dispatch(fetchSalesNotifications())
       dispatch(markSalesNotificationsRead())
     }
   }
