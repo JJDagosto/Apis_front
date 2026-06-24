@@ -20,6 +20,10 @@ function CartSummary({
   const couponDiscount = Number(couponValidation?.descuento ?? 0)
   const couponValidForCode =
     couponValidation?.codigo?.toUpperCase?.() === couponCode.toUpperCase()
+  const couponDiscountAmount = couponValidForCode
+    ? totals.totalBeforeCoupon * couponDiscount
+    : 0
+  const totalAfterCoupon = Math.max(totals.totalBeforeCoupon - couponDiscountAmount, 0)
 
   return (
     <aside className="cart-summary">
@@ -59,10 +63,28 @@ function CartSummary({
           </strong>
         </div>
       )}
-      <div className="cart-summary-row cart-summary-total">
-        <span>Total estimado</span>
+      <div className="cart-summary-row">
+        <span>Total antes de cupón</span>
         <strong>{formatPrice(totals.totalBeforeCoupon)}</strong>
       </div>
+      {couponValidForCode && (
+        <>
+          <div className="cart-summary-row cart-summary-discount">
+            <span>Descuento por cupón</span>
+            <strong>-{formatPrice(couponDiscountAmount)}</strong>
+          </div>
+          <div className="cart-summary-row cart-summary-total">
+            <span>Nuevo total</span>
+            <strong>{formatPrice(totalAfterCoupon)}</strong>
+          </div>
+        </>
+      )}
+      {!couponValidForCode && (
+        <div className="cart-summary-row cart-summary-total">
+          <span>Total estimado</span>
+          <strong>{formatPrice(totals.totalBeforeCoupon)}</strong>
+        </div>
+      )}
 
       <label className="cart-cupon">
         Cupón (opcional)

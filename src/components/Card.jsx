@@ -8,6 +8,8 @@ const Card = ({
   nombreSkin,
   estado,
   precio,
+  precioOriginal,
+  descuento,
   imagen,
   onClick,
   addToCart,
@@ -17,6 +19,9 @@ const Card = ({
   onManage,
 }) => {
   const { formatPrice } = useCurrencyFormatter()
+  const discountRate = Number(descuento ?? 0)
+  const hasDiscount = discountRate > 0
+  const originalPrice = Number(precioOriginal ?? precio)
 
   const handleActionClick = (event) => {
     event.stopPropagation()
@@ -41,7 +46,17 @@ const Card = ({
           <span className="text1 m-0">{estado}</span>
         </div>
         <div className="d-flex justify-content-between align-items-center w-100 mt-3">
-          <span className="" id="precio">{formatPrice(precio)}</span>
+          <div className="card-price-stack">
+            {hasDiscount && (
+              <span className="card-old-price">{formatPrice(originalPrice)}</span>
+            )}
+            <span className="" id="precio">{formatPrice(precio)}</span>
+            {hasDiscount && (
+              <span className="card-discount-badge">
+                {Math.round(discountRate * 100)}% OFF
+              </span>
+            )}
+          </div>
           <button
             type="button"
             className={`btn d-flex align-items-center justify-content-center cart-card-button ${inCart ? "in-cart" : ""} ${isOwnPublication ? "own-publication" : ""}`}

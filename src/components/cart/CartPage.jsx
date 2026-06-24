@@ -7,7 +7,7 @@ import {
   validarCheckoutCupon,
 } from "../../Redux/appSlice"
 import { eliminarItemCarrito, vaciarCarrito } from "../../Redux/carritoSlice"
-import { resetCheckout } from "../../Redux/checkoutSlice"
+import { prepararCheckoutCarrito, resetCheckout } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { getCartTotals } from "../../utils/cartTotals"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
@@ -86,6 +86,7 @@ function CartPage() {
       return
     }
 
+    dispatch(prepararCheckoutCarrito())
     dispatch(setCheckoutCupon(cupon))
     navigate("/checkout")
   }

@@ -31,6 +31,8 @@ function CatalogGrid({
             arma={skin.catalogo?.weaponName}
             estado={skin.catalogo?.exteriorName ?? skin.exterior}
             precio={skin.estimatedTradePrice ?? skin.finalPrice ?? skin.precioFinal ?? skin.price}
+            precioOriginal={skin.price}
+            descuento={skin.discount}
             imagen={skin.imageUrl}
             onClick={() => onOpenPublication(skin.id)}
             addToCart={() => onCartClick(skin.id)}

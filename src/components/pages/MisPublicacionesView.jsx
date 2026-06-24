@@ -5,10 +5,14 @@ import { useNavigate } from "react-router-dom"
 import { marcarInventarioItemDisponible } from "../../Redux/inventarioSlice"
 import {
   activarPublicacion,
+  activarPublicacionLocal,
   cancelarPagoPendiente,
   despublicarPublicacion,
+  despublicarPublicacionLocal,
+  editarPublicacionLocal,
   editarPublicacion,
   pausarPublicacion,
+  pausarPublicacionLocal,
 } from "../../Redux/publicacionesSlice"
 import { resetCheckout, retomarCheckoutPendiente } from "../../Redux/checkoutSlice"
 import { fetchMisOperaciones } from "../../Redux/intercambioSlice"
@@ -121,6 +125,12 @@ function MisPublicaciones({ goToLogin }) {
     setError("")
     setActionId(skin.id)
     try {
+      if (skin.localOptimistic) {
+        dispatch(despublicarPublicacionLocal(skin))
+        dispatch(mostrarNotificacion("Publicación retirada."))
+        return
+      }
+
       const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
       dispatch(marcarInventarioItemDisponible({
         itemId: skin.inventarioItem?.id,
@@ -143,6 +153,12 @@ function MisPublicaciones({ goToLogin }) {
     setError("")
     setActionId(skin.id)
     try {
+      if (skin.localOptimistic) {
+        dispatch(pausarPublicacionLocal(skin))
+        dispatch(mostrarNotificacion("Publicación pausada. Podés reactivarla desde Mis publicaciones."))
+        return
+      }
+
       const result = await dispatch(pausarPublicacion(skin.id)).unwrap()
       dispatch(mostrarNotificacion(
         result.message || "Publicacion pausada. Podés reactivarla desde Mis publicaciones.",
@@ -159,6 +175,12 @@ function MisPublicaciones({ goToLogin }) {
     setError("")
     setActionId(skin.id)
     try {
+      if (skin.localOptimistic) {
+        dispatch(activarPublicacionLocal(skin))
+        dispatch(mostrarNotificacion("Publicación reactivada."))
+        return
+      }
+
       const result = await dispatch(activarPublicacion(skin.id)).unwrap()
       dispatch(mostrarNotificacion(
         result.message || "Publicación reactivada.",
@@ -203,6 +225,23 @@ function MisPublicaciones({ goToLogin }) {
 
     setSaving(true)
     try {
+      if (editItem.localOptimistic) {
+        const discount = discountNumber / 100
+        dispatch(editarPublicacionLocal({
+          skinId: editItem.id,
+          changes: {
+            price: priceNumber,
+            discount,
+            finalPrice: priceNumber - (priceNumber * discount),
+            vendible: true,
+            intercambiable: false,
+          },
+        }))
+        dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
+        setEditItem(null)
+        return
+      }
+
       await dispatch(editarPublicacion({
         skinId: editItem.id,
         price: priceNumber,

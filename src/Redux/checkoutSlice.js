@@ -26,6 +26,56 @@ const approvedResult = (order) => ({
   order,
 })
 
+const findCheckoutCatalogSkin = (state, skinId) =>
+  state.catalogo.items.find((skin) => String(skin.id) === String(skinId)) ??
+  (String(state.checkout.instantItem?.id) === String(skinId) ? state.checkout.instantItem : null)
+
+const buildPurchasedPublications = (state, payment) => {
+  const order = payment?.order ?? state.checkout.data?.order
+  if (!approvedPayment(payment) || order?.operationType !== "PURCHASE") return []
+
+  return (order.orderDetailResponses ?? [])
+    .filter((detail) => detail?.skinId)
+    .map((detail) => {
+      const source = findCheckoutCatalogSkin(state, detail.skinId) ?? {}
+      const price = Number(detail.unitPrice ?? source.finalPrice ?? source.price ?? 0)
+
+      return {
+        ...source,
+        id: `local-purchase-${order.id}-${detail.skinId}`,
+        localOptimistic: true,
+        sourceOrderId: order.id,
+        sourceSkinId: detail.skinId,
+        name: detail.skinName ?? source.name ?? "Skin comprada",
+        imageUrl: detail.imageUrl ?? source.imageUrl,
+        price,
+        finalPrice: price,
+        discount: 0,
+        active: false,
+        estadoPublicacion: "PAUSADA",
+        stock: 1,
+        vendible: true,
+        intercambiable: true,
+      }
+    })
+}
+
+const enrichOrderFromState = (state, order) => {
+  if (!order?.orderDetailResponses) return order
+
+  return {
+    ...order,
+    orderDetailResponses: order.orderDetailResponses.map((detail) => {
+      const source = findCheckoutCatalogSkin(state, detail.skinId) ?? {}
+      return {
+        ...detail,
+        skinName: detail.skinName ?? source.name,
+        imageUrl: detail.imageUrl ?? source.imageUrl,
+      }
+    }),
+  }
+}
+
 const clearApprovedCart = async (token) => {
   try {
     const response = await apiRequest(
@@ -46,6 +96,8 @@ export const iniciarCheckout = createAsyncThunk(
     const token = getToken(getState)
     const normalizedCupon = cupon || ""
     const paidOrder = getApprovedOrder(state)
+    const instantItem = state.checkout.instantItem
+    const checkoutMode = instantItem ? "instant" : "cart"
 
     if (paidOrder) {
       return {
@@ -57,6 +109,8 @@ export const iniciarCheckout = createAsyncThunk(
     const reusableSession =
       state.checkout.session?.email === email &&
       state.checkout.session?.cupon === normalizedCupon &&
+      state.checkout.session?.mode === checkoutMode &&
+      (!instantItem || state.checkout.session?.skinId === instantItem.id) &&
       state.checkout.session?.data?.order?.id
 
     if (reusableSession) {
@@ -67,20 +121,35 @@ export const iniciarCheckout = createAsyncThunk(
       }
     }
 
-    const query = normalizedCupon
-      ? `?codigoCupon=${encodeURIComponent(normalizedCupon)}`
-      : ""
-    const response = await apiRequest(
-      `/order/from-carrito${query}`,
-      { method: "POST" },
-      token,
-    )
-    const data = { order: response.data }
+    const response = instantItem
+      ? await apiRequest(
+        "/order/direct",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            codigoCupon: normalizedCupon || null,
+            itemList: [{ skinId: instantItem.id, quantity: 1 }],
+          }),
+        },
+        token,
+      )
+      : await apiRequest(
+        `/order/from-carrito${normalizedCupon ? `?codigoCupon=${encodeURIComponent(normalizedCupon)}` : ""}`,
+        { method: "POST" },
+        token,
+      )
+    const data = { order: enrichOrderFromState(state, response.data) }
 
     return {
       approved: false,
       data,
-      session: { email, cupon: normalizedCupon, data },
+      session: {
+        email,
+        cupon: normalizedCupon,
+        data,
+        mode: checkoutMode,
+        skinId: instantItem?.id,
+      },
     }
   },
   {
@@ -94,7 +163,12 @@ export const sincronizarPagoCheckout = createAsyncThunk(
     const state = getState()
     const paidOrder = getApprovedOrder(state)
     if (paidOrder) {
-      return { payment: approvedResult(paidOrder), cart: null }
+      const payment = approvedResult(paidOrder)
+      return {
+        payment,
+        cart: null,
+        purchasedPublications: buildPurchasedPublications(state, payment),
+      }
     }
 
     const orderId = state.checkout.data?.order?.id
@@ -121,9 +195,10 @@ export const sincronizarPagoCheckout = createAsyncThunk(
 
     return {
       payment,
-      cart: approvedPayment(payment)
+      cart: approvedPayment(payment) && !state.checkout.instantItem
         ? await clearApprovedCart(token)
         : null,
+      purchasedPublications: buildPurchasedPublications(state, payment),
     }
   },
 )
@@ -134,7 +209,12 @@ export const procesarPagoPrueba = createAsyncThunk(
     const state = getState()
     const paidOrder = getApprovedOrder(state)
     if (paidOrder) {
-      return { payment: approvedResult(paidOrder), cart: null }
+      const payment = approvedResult(paidOrder)
+      return {
+        payment,
+        cart: null,
+        purchasedPublications: buildPurchasedPublications(state, payment),
+      }
     }
 
     const orderId = state.checkout.data?.order?.id
@@ -155,9 +235,10 @@ export const procesarPagoPrueba = createAsyncThunk(
 
     return {
       payment: response.data,
-      cart: approvedPayment(response.data)
+      cart: approvedPayment(response.data) && !state.checkout.instantItem
         ? await clearApprovedCart(token)
         : null,
+      purchasedPublications: buildPurchasedPublications(state, response.data),
     }
   },
   {
@@ -206,7 +287,13 @@ export const pagarCheckoutConSaldo = createAsyncThunk(
     const state = getState()
     const paidOrder = getApprovedOrder(state)
     if (paidOrder) {
-      return { payment: approvedResult(paidOrder), cart: null, alreadyPaid: true }
+      const payment = approvedResult(paidOrder)
+      return {
+        payment,
+        cart: null,
+        purchasedPublications: buildPurchasedPublications(state, payment),
+        alreadyPaid: true,
+      }
     }
 
     const orderId = state.checkout.data?.order?.id
@@ -229,9 +316,10 @@ export const pagarCheckoutConSaldo = createAsyncThunk(
 
     return {
       payment: response.data,
-      cart: approvedPayment(response.data)
+      cart: approvedPayment(response.data) && !state.checkout.instantItem
         ? await clearApprovedCart(token)
         : null,
+      purchasedPublications: buildPurchasedPublications(state, response.data),
     }
   },
   {
@@ -245,6 +333,7 @@ export const pagarCheckoutConSaldo = createAsyncThunk(
 const checkoutSlice = createSlice({
   name: "checkout",
   initialState: {
+    instantItem: null,
     session: null,
     data: null,
     status: "idle",
@@ -257,6 +346,31 @@ const checkoutSlice = createSlice({
   },
   reducers: {
     resetCheckout: (state) => {
+      state.instantItem = null
+      state.session = null
+      state.data = null
+      state.status = "idle"
+      state.syncing = false
+      state.testProcessing = false
+      state.balanceProcessing = false
+      state.mercadoPagoProcessing = false
+      state.result = null
+      state.error = null
+    },
+    prepararCheckoutInstantaneo: (state, action) => {
+      state.instantItem = action.payload
+      state.session = null
+      state.data = null
+      state.status = "idle"
+      state.syncing = false
+      state.testProcessing = false
+      state.balanceProcessing = false
+      state.mercadoPagoProcessing = false
+      state.result = null
+      state.error = null
+    },
+    prepararCheckoutCarrito: (state) => {
+      state.instantItem = null
       state.session = null
       state.data = null
       state.status = "idle"
@@ -280,6 +394,7 @@ const checkoutSlice = createSlice({
       }
 
       state.session = { email, cupon: "", data }
+      state.instantItem = null
       state.data = data
       state.status = "succeeded"
       state.syncing = false
@@ -327,6 +442,7 @@ const checkoutSlice = createSlice({
         }
         if (approvedPayment(payment)) {
           state.session = null
+          state.instantItem = null
           if (state.data && payment.order) {
             state.data.order = payment.order
           }
@@ -349,6 +465,7 @@ const checkoutSlice = createSlice({
         }
         if (approvedPayment(action.payload.payment)) {
           state.session = null
+          state.instantItem = null
           if (state.data && action.payload.payment.order) {
             state.data.order = action.payload.payment.order
           }
@@ -388,6 +505,7 @@ const checkoutSlice = createSlice({
           order: action.payload.payment.order ?? state.data?.order,
         }
         state.session = null
+        state.instantItem = null
         if (state.data && action.payload.payment.order) {
           state.data.order = action.payload.payment.order
         }
@@ -397,6 +515,7 @@ const checkoutSlice = createSlice({
         state.error = action.error.message
       })
       .addCase(logout, (state) => {
+        state.instantItem = null
         state.session = null
         state.data = null
         state.status = "idle"
@@ -414,6 +533,8 @@ export const {
   resetCheckout,
   clearCheckoutResult,
   retomarCheckoutPendiente,
+  prepararCheckoutInstantaneo,
+  prepararCheckoutCarrito,
 } = checkoutSlice.actions
 
 export default checkoutSlice.reducer

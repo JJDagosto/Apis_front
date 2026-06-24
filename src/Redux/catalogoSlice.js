@@ -4,10 +4,14 @@ import { DEFAULT_USD_TO_ARS } from "../utils/currency"
 import { limpiarNombreSkin } from "../utils/skinFormat"
 import {
   activarPublicacion,
+  activarPublicacionLocal,
   cancelarPagoPendiente,
   despublicarPublicacion,
+  despublicarPublicacionLocal,
   editarPublicacion,
+  editarPublicacionLocal,
   pausarPublicacion,
+  pausarPublicacionLocal,
 } from "./publicacionesSlice"
 import { publicarInventarioItem } from "./inventarioSlice"
 import {
@@ -35,6 +39,16 @@ const markOrderSkinsAsReserved = (state, order) => {
     skin.estadoPublicacion = "RESERVADA"
     skin.active = false
   })
+}
+
+const upsertCatalogSkin = (state, skin) => {
+  if (!skin?.id) return
+  const index = state.items.findIndex((item) => item.id === skin.id)
+  if (index === -1) {
+    state.items.push(skin)
+    return
+  }
+  state.items[index] = { ...state.items[index], ...skin }
 }
 
 export const fetchCatalogo = createAsyncThunk(
@@ -180,11 +194,45 @@ const catalogoSlice = createSlice({
         }
       })
       .addCase(activarPublicacion.fulfilled, (state, action) => {
+        const activatedSkin = action.payload.skin
+          ? {
+            ...action.payload.skin,
+            active: true,
+            estadoPublicacion: "PUBLICADA",
+          }
+          : null
         const skin = state.items.find((item) => item.id === action.payload.skinId)
         if (skin) {
           skin.active = true
           skin.estadoPublicacion = "PUBLICADA"
+        } else {
+          upsertCatalogSkin(state, activatedSkin)
         }
+      })
+      .addCase(editarPublicacionLocal, (state, action) => {
+        const { skinId, changes } = action.payload
+        const skin = state.items.find((item) => item.id === skinId)
+        if (skin) {
+          Object.assign(skin, changes)
+        }
+      })
+      .addCase(pausarPublicacionLocal, (state, action) => {
+        const skin = state.items.find((item) => item.id === action.payload.id)
+        if (skin) {
+          skin.active = false
+          skin.estadoPublicacion = "PAUSADA"
+        }
+      })
+      .addCase(activarPublicacionLocal, (state, action) => {
+        upsertCatalogSkin(state, {
+          ...action.payload,
+          active: true,
+          estadoPublicacion: "PUBLICADA",
+          vendible: true,
+        })
+      })
+      .addCase(despublicarPublicacionLocal, (state, action) => {
+        state.items = state.items.filter((skin) => skin.id !== action.payload.id)
       })
       .addCase(publicarInventarioItem.fulfilled, (state, action) => {
         state.items.push(action.payload.skin)

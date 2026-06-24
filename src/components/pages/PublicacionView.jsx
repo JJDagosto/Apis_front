@@ -3,7 +3,7 @@ import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-i
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate, useParams } from "react-router-dom"
 import { agregarAlCarrito, eliminarItemCarrito } from "../../Redux/carritoSlice"
-import { resetCheckout } from "../../Redux/checkoutSlice"
+import { prepararCheckoutInstantaneo, resetCheckout } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { despublicarPublicacion, editarPublicacion } from "../../Redux/publicacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
@@ -129,7 +129,7 @@ function Publicacion() {
     }
   }
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = () => {
     setError("")
 
     if (!currentUser) {
@@ -143,24 +143,15 @@ function Publicacion() {
       return
     }
 
-    if (isInCart) {
-      navigate("/carrito")
-      return
-    }
-
-    setAddingCart(true)
-
-    try {
-      await dispatch(agregarAlCarrito(skin.id)).unwrap()
-      dispatch(resetCheckout())
-      dispatch(mostrarNotificacion("Ítem agregado al carrito con éxito."))
-      navigate("/carrito")
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
-    } finally {
-      setAddingCart(false)
-    }
+    dispatch(prepararCheckoutInstantaneo({
+      id: skin.id,
+      name: skin.name,
+      imageUrl: skin.imageUrl,
+      price: skin.price,
+      finalPrice: skin.finalPrice ?? skin.price,
+      discount: skin.discount ?? 0,
+    }))
+    navigate("/checkout")
   }
 
   if (loading) {

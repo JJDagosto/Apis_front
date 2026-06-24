@@ -13,6 +13,31 @@
     background-color: #ffca2c;
     color: #0c0524;
 }
+
+.card-price-stack {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+.card-old-price {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+  text-decoration: line-through;
+}
+
+.card-discount-badge {
+  background: rgba(255, 202, 44, 0.12);
+  border: 1px solid rgba(255, 202, 44, 0.3);
+  border-radius: 999px;
+  color: #ffca2c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+}
+
 .contenedorImagen {
   position: relative;
 }

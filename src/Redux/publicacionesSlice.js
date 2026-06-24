@@ -2,6 +2,12 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout } from "./authSlice"
 import { publicarInventarioItem } from "./inventarioSlice"
+import {
+  iniciarCheckout,
+  pagarCheckoutConSaldo,
+  procesarPagoPrueba,
+  sincronizarPagoCheckout,
+} from "./checkoutSlice"
 
 const getToken = (getState) => getState().auth.token
 
@@ -101,36 +107,39 @@ export const editarPublicacion = createAsyncThunk(
 export const despublicarPublicacion = createAsyncThunk(
   "publicaciones/despublicarPublicacion",
   async (skinId, { getState }) => {
+    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
     const response = await apiRequest(
       `/skins/${skinId}/inactivar`,
       { method: "PUT" },
       getToken(getState),
     )
-    return { skinId, message: response.message }
+    return { skinId, skin, message: response.message }
   },
 )
 
 export const pausarPublicacion = createAsyncThunk(
   "publicaciones/pausarPublicacion",
   async (skinId, { getState }) => {
+    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
     const response = await apiRequest(
       `/skins/${skinId}/pausar`,
       { method: "PUT" },
       getToken(getState),
     )
-    return { skinId, message: response.message }
+    return { skinId, skin, message: response.message }
   },
 )
 
 export const activarPublicacion = createAsyncThunk(
   "publicaciones/activarPublicacion",
   async (skinId, { getState }) => {
+    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
     const response = await apiRequest(
       `/skins/${skinId}/activar`,
       { method: "PUT" },
       getToken(getState),
     )
-    return { skinId, message: response.message }
+    return { skinId, skin, message: response.message }
   },
 )
 
@@ -145,6 +154,86 @@ export const cancelarPagoPendiente = createAsyncThunk(
     return response.data
   },
 )
+
+
+const getPaymentOrder = (payload) =>
+  payload?.payment?.order ?? payload?.result?.order ?? payload?.order ?? null
+
+const isApprovedPurchasePayload = (payload) => {
+  const payment = payload?.payment ?? payload?.result ?? payload
+  const order = getPaymentOrder(payload)
+  return (
+    (payment?.status === "approved" || order?.paymentStatus === "PAID") &&
+    order?.operationType === "PURCHASE"
+  )
+}
+
+const isPendingPurchaseOrder = (order) =>
+  order?.operationType === "PURCHASE" &&
+  PENDING_PAYMENT_STATUSES.has(order.paymentStatus)
+
+const upsertOrder = (orders, order) => {
+  if (!order?.id) return
+  const index = orders.findIndex((item) => item.id === order.id)
+  if (index === -1) {
+    orders.unshift(order)
+    return
+  }
+  orders[index] = { ...orders[index], ...order }
+}
+
+const buildPausedPublicationFromPurchase = (order, detail) => {
+  const price = Number(detail.unitPrice ?? 0)
+  return {
+    id: `local-purchase-${order.id}-${detail.skinId}`,
+    localOptimistic: true,
+    sourceOrderId: order.id,
+    sourceSkinId: detail.skinId,
+    name: detail.skinName ?? "Skin comprada",
+    imageUrl: detail.imageUrl,
+    price,
+    finalPrice: price,
+    discount: 0,
+    active: false,
+    estadoPublicacion: "PAUSADA",
+    stock: 1,
+    vendible: true,
+    intercambiable: true,
+  }
+}
+
+const addPausedPurchasedPublications = (state, order, purchasedPublications = []) => {
+  const fallbackPublications = (order?.orderDetailResponses ?? [])
+    .filter((detail) => detail?.skinId)
+    .map((detail) => buildPausedPublicationFromPurchase(order, detail))
+
+  for (const publication of purchasedPublications.length > 0 ? purchasedPublications : fallbackPublications) {
+    const alreadyVisible = state.items.some((skin) =>
+      skin.sourceOrderId === publication.sourceOrderId &&
+      skin.sourceSkinId === publication.sourceSkinId,
+    )
+    if (!alreadyVisible) {
+      state.items.unshift(publication)
+    }
+  }
+}
+
+const applyApprovedPurchase = (state, payload) => {
+  if (!isApprovedPurchasePayload(payload)) return
+
+  const order = getPaymentOrder(payload)
+  state.pagosPendientes = state.pagosPendientes.filter((item) => item.id !== order.id)
+  upsertOrder(state.compras, order)
+  addPausedPurchasedPublications(state, order, payload.purchasedPublications ?? [])
+}
+
+const applyPendingPurchase = (state, payload) => {
+  const order = payload?.data?.order
+  if (!isPendingPurchaseOrder(order)) return
+
+  state.compras = state.compras.filter((item) => item.id !== order.id)
+  upsertOrder(state.pagosPendientes, order)
+}
 
 const updateSkin = (items, skinId, changes) => {
   const index = items.findIndex((skin) => skin.id === skinId)
@@ -170,6 +259,28 @@ const publicacionesSlice = createSlice({
     error: null,
   },
   reducers: {
+    editarPublicacionLocal: (state, action) => {
+      const { skinId, changes } = action.payload
+      updateSkin(state.items, skinId, changes)
+      updateSkin(state.historial, skinId, changes)
+    },
+    pausarPublicacionLocal: (state, action) => {
+      updateSkin(state.items, action.payload.id, {
+        active: false,
+        estadoPublicacion: "PAUSADA",
+      })
+    },
+    activarPublicacionLocal: (state, action) => {
+      updateSkin(state.items, action.payload.id, {
+        active: true,
+        estadoPublicacion: "PUBLICADA",
+        vendible: true,
+      })
+    },
+    despublicarPublicacionLocal: (state, action) => {
+      state.items = state.items.filter((skin) => skin.id !== action.payload.id)
+      state.historial = state.historial.filter((skin) => skin.id !== action.payload.id)
+    },
     markSalesNotificationsRead: (state) => {
       state.readSaleNotificationIds = state.salesNotifications.map(
         (sale) => `${sale.orderId}-${sale.skinId}`,
@@ -249,6 +360,21 @@ const publicacionesSlice = createSlice({
         state.pagosPendientes = state.pagosPendientes.filter(
           (order) => order.id !== action.payload.id,
         )
+        state.items = state.items.filter(
+          (skin) => skin.sourceOrderId !== action.payload.id,
+        )
+      })
+      .addCase(iniciarCheckout.fulfilled, (state, action) => {
+        applyPendingPurchase(state, action.payload)
+      })
+      .addCase(sincronizarPagoCheckout.fulfilled, (state, action) => {
+        applyApprovedPurchase(state, action.payload)
+      })
+      .addCase(procesarPagoPrueba.fulfilled, (state, action) => {
+        applyApprovedPurchase(state, action.payload)
+      })
+      .addCase(pagarCheckoutConSaldo.fulfilled, (state, action) => {
+        applyApprovedPurchase(state, action.payload)
       })
       .addCase(publicarInventarioItem.fulfilled, (state, action) => {
         state.items.push(action.payload.skin)
@@ -270,6 +396,12 @@ const publicacionesSlice = createSlice({
   },
 })
 
-export const { markSalesNotificationsRead } = publicacionesSlice.actions
+export const {
+  activarPublicacionLocal,
+  despublicarPublicacionLocal,
+  editarPublicacionLocal,
+  markSalesNotificationsRead,
+  pausarPublicacionLocal,
+} = publicacionesSlice.actions
 
 export default publicacionesSlice.reducer
