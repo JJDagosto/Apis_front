@@ -34,6 +34,7 @@ export const cotizarIntercambio = createAsyncThunk(
   {
     condition: (selection, { getState }) => {
       const state = getState().intercambio
+      if (state.submitting) return false
       const key = selectionKey(selection)
       return !(
         (state.quoteStatus === "loading" && state.pendingQuoteKey === key) ||
@@ -61,6 +62,9 @@ export const crearIntercambio = createAsyncThunk(
       dispatch(setCurrentUserBalance(Math.max(currentBalance - amountPaid, 0)))
     }
     return response.data
+  },
+  {
+    condition: (_, { getState }) => !getState().intercambio.submitting,
   },
 )
 
@@ -95,6 +99,7 @@ const initialState = {
   pendingQuoteKey: null,
   quotedSelectionKey: null,
   submitting: false,
+  submitError: null,
   operation: null,
   operations: [],
   operationsStatus: "idle",
@@ -133,6 +138,7 @@ const intercambioSlice = createSlice({
     clearExchangeSelection: (state) => {
       state.offeredInventoryItemIds = []
       state.requestedSkinIds = []
+      state.submitError = null
       resetQuote(state)
     },
   },
@@ -159,10 +165,12 @@ const intercambioSlice = createSlice({
       })
       .addCase(crearIntercambio.pending, (state) => {
         state.submitting = true
+        state.submitError = null
         state.quoteError = null
       })
       .addCase(crearIntercambio.fulfilled, (state, action) => {
         state.submitting = false
+        state.submitError = null
         state.operation = action.payload
         state.operations = [
           action.payload,
@@ -174,6 +182,7 @@ const intercambioSlice = createSlice({
       })
       .addCase(crearIntercambio.rejected, (state, action) => {
         state.submitting = false
+        state.submitError = action.error.message
         state.quoteError = action.error.message
       })
       .addCase(fetchMisOperaciones.pending, (state) => {

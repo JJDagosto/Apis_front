@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { registerUser } from "../../Redux/authSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getRegisterPasswordError, isValidEmail } from "../../utils/validations.jsx"
 import PasswordInput from "../PasswordInput.jsx"
 import "../../pages/Register.css"
@@ -47,21 +48,23 @@ function Register({ goToLogin }) {
 
     setLoading(true)
 
-    try {
-      const msg = await dispatch(registerUser({
+    const action = await dispatch(registerUser({
         username: form.username.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
         password: form.password,
         passwordRepeat: form.passwordRepeat,
-      })).unwrap()
-      setMessage(msg || "Cuenta creada. Verificá tu email antes de iniciar sesión.")
-    } catch (error) {
-      setError(error.message)
-    } finally {
+    }))
+
+    if (isRejectedAction(action)) {
+      setError(actionErrorMessage(action))
       setLoading(false)
+      return
     }
+
+    setMessage(action.payload || "Cuenta creada. Verificá tu email antes de iniciar sesión.")
+    setLoading(false)
   }
 
   return (

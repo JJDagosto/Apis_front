@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { verifyUserEmail } from "../../Redux/authSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Login.css"
 
 function VerifyEmail({ token, goToLogin }) {
@@ -21,16 +22,17 @@ function VerifyEmail({ token, goToLogin }) {
     let cancelled = false
 
     const verify = async () => {
-      try {
-        const msg = await dispatch(verifyUserEmail(token)).unwrap()
-        if (cancelled) return
-        setStatus("ok")
-        setMessage(msg || "Email verificado. Ya podés iniciar sesión.")
-      } catch (error) {
-        if (cancelled) return
+      const action = await dispatch(verifyUserEmail(token))
+      if (cancelled) return
+
+      if (isRejectedAction(action)) {
         setStatus("error")
-        setMessage(error.message)
+        setMessage(actionErrorMessage(action))
+        return
       }
+
+      setStatus("ok")
+      setMessage(action.payload || "Email verificado. Ya podés iniciar sesión.")
     }
 
     verify()

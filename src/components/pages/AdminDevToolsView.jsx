@@ -12,6 +12,7 @@ import {
 } from "../../Redux/adminSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getPercentRangeError, getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/AdminDevTools.css"
 
@@ -187,19 +188,19 @@ function AdminDevTools({ goToCatalogo }) {
       return
     }
 
-    try {
-      const data = await dispatch(
-        buscarCatalogoAdmin(catalogSearch.trim()),
-      ).unwrap()
-      if (data.length === 0) {
-        dispatch(mostrarNotificacion(
-          "No encontramos skins con ese nombre.",
-          "info",
-        ))
-      }
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
+    const action = await dispatch(buscarCatalogoAdmin(catalogSearch.trim()))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
+    }
+
+    if ((action.payload ?? []).length === 0) {
+      dispatch(mostrarNotificacion(
+        "No encontramos skins con ese nombre.",
+        "info",
+      ))
     }
   }
 
@@ -223,25 +224,28 @@ function AdminDevTools({ goToCatalogo }) {
     }
 
     setActionId("create-skin")
-    try {
-      await dispatch(crearSkinAdminParaUsuario({
-        vendedorEmail: seller.email,
-        payload: {
-          catalogoId: selectedCatalog.id,
-          price: Number(price),
-          discount: 0,
-          stock: 1,
-        },
-      })).unwrap()
-      dispatch(mostrarNotificacion(
-        `Publicación admin creada para ${seller.email}.`,
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    const action = await dispatch(crearSkinAdminParaUsuario({
+      vendedorEmail: seller.email,
+      payload: {
+        catalogoId: selectedCatalog.id,
+        price: Number(price),
+        discount: 0,
+        stock: 1,
+      },
+    }))
+
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setActionId(null)
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      `Publicación admin creada para ${seller.email}.`,
+    ))
+    setActionId(null)
   }
 
   const handleDeactivateSkin = async (skin) => {
@@ -252,17 +256,19 @@ function AdminDevTools({ goToCatalogo }) {
 
     setError("")
     setActionId(`skin-${skin.id}`)
-    try {
-      const result = await dispatch(inactivarSkinAdmin(skin.id)).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Publicación eliminada.",
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    const action = await dispatch(inactivarSkinAdmin(skin.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setActionId(null)
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicación eliminada.",
+    ))
+    setActionId(null)
   }
 
   const handleCreateCoupon = async (event) => {
@@ -281,16 +287,18 @@ function AdminDevTools({ goToCatalogo }) {
     }
 
     setActionId("create-coupon")
-    try {
-      await dispatch(crearCuponAdmin(couponForm)).unwrap()
-      setCouponForm({ codigo: "", descuentoPct: "10", fechaExpiracion: "", multiUso: true })
-      dispatch(mostrarNotificacion("Cupón creado correctamente."))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    const action = await dispatch(crearCuponAdmin(couponForm))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setActionId(null)
+      return
     }
+
+    setCouponForm({ codigo: "", descuentoPct: "10", fechaExpiracion: "", multiUso: true })
+    dispatch(mostrarNotificacion("Cupón creado correctamente."))
+    setActionId(null)
   }
 
   const handleDeleteCoupon = async (cupon) => {
@@ -299,17 +307,19 @@ function AdminDevTools({ goToCatalogo }) {
 
     setError("")
     setActionId(`coupon-${cupon.id}`)
-    try {
-      const result = await dispatch(eliminarCuponAdmin(cupon.id)).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Cupón eliminado.",
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    const action = await dispatch(eliminarCuponAdmin(cupon.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setActionId(null)
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Cupón eliminado.",
+    ))
+    setActionId(null)
   }
 
   if (!isAdmin) {

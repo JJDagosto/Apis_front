@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { loginUser, resendVerificationEmail } from "../../Redux/authSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import PasswordInput from "../PasswordInput.jsx"
 import SteamLoginButton from "../SteamLoginButton.jsx"
 import "../../pages/Login.css"
@@ -23,12 +24,13 @@ function Login({ goToCatalogo, goToRegister, goToForgot }) {
     setError("")
     setMessage("")
 
-    try {
-      await dispatch(loginUser({ email, password })).unwrap()
-      openCatalogo()
-    } catch (error) {
-      setError(error.message)
+    const action = await dispatch(loginUser({ email, password }))
+    if (isRejectedAction(action)) {
+      setError(actionErrorMessage(action))
+      return
     }
+
+    openCatalogo()
   }
 
   const handleResendVerification = async () => {
@@ -39,12 +41,13 @@ function Login({ goToCatalogo, goToRegister, goToForgot }) {
       return
     }
 
-    try {
-      const msg = await dispatch(resendVerificationEmail(email.trim())).unwrap()
-      setMessage(msg || "Si tu cuenta está pendiente, reenviamos el link.")
-    } catch (error) {
-      setError(error.message)
+    const action = await dispatch(resendVerificationEmail(email.trim()))
+    if (isRejectedAction(action)) {
+      setError(actionErrorMessage(action))
+      return
     }
+
+    setMessage(action.payload || "Si tu cuenta está pendiente, reenviamos el link.")
   }
 
   return (

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
+import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 
 export const useCatalogCartActions = () => {
@@ -45,20 +46,21 @@ export const useCatalogCartActions = () => {
     const cartItem = getCartItemBySkinId(skinId)
     setAddingSkinId(skinId)
 
-    try {
-      if (cartItem) {
-        await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
-        dispatch(mostrarNotificacion("Ítem eliminado del carrito."))
-      } else {
-        await dispatch(agregarAlCarrito(skinId)).unwrap()
-        dispatch(mostrarNotificacion("Ítem agregado al carrito con éxito."))
-      }
-    } catch (cartError) {
-      setError(cartError.message)
-      dispatch(mostrarNotificacion(cartError.message, "error"))
-    } finally {
-      setAddingSkinId(null)
+    const action = cartItem
+      ? await dispatch(eliminarItemCarrito(cartItem.id))
+      : await dispatch(agregarAlCarrito(skinId))
+
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+    } else if (cartItem) {
+      dispatch(mostrarNotificacion("Item eliminado del carrito."))
+    } else {
+      dispatch(mostrarNotificacion("Item agregado al carrito con exito."))
     }
+
+    setAddingSkinId(null)
   }
 
   return {

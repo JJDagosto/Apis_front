@@ -7,6 +7,7 @@ import { prepararCheckoutInstantaneo, resetCheckout } from "../../Redux/checkout
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { despublicarPublicacion, editarPublicacion } from "../../Redux/publicacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
@@ -63,22 +64,23 @@ function Publicacion() {
 
     setAddingCart(true)
 
-    try {
-      if (isInCart) {
-        await dispatch(eliminarItemCarrito(cartItem.id)).unwrap()
-        dispatch(mostrarNotificacion("Ítem eliminado del carrito."))
-      } else {
-        await dispatch(agregarAlCarrito(skin.id)).unwrap()
-        dispatch(mostrarNotificacion("Ítem agregado al carrito con éxito."))
-      }
+    const action = isInCart
+      ? await dispatch(eliminarItemCarrito(cartItem.id))
+      : await dispatch(agregarAlCarrito(skin.id))
 
-      dispatch(resetCheckout())
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
-    } finally {
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setAddingCart(false)
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      isInCart ? "Ítem eliminado del carrito." : "Ítem agregado al carrito con éxito.",
+    ))
+    dispatch(resetCheckout())
+    setAddingCart(false)
   }
 
   const handleOwnerEdit = async (event) => {
@@ -92,21 +94,24 @@ function Publicacion() {
     }
 
     setSavingOwner(true)
-    try {
-      await dispatch(editarPublicacion({
-        skinId: skin.id,
-        price: Number(ownerPrice),
-        discount: skin.discount ?? 0,
-        vendible: skin.vendible !== false,
-        intercambiable: skin.vendible !== false ? false : skin.intercambiable === true,
-      })).unwrap()
-      dispatch(mostrarNotificacion("Precio actualizado correctamente."))
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
-    } finally {
+    const action = await dispatch(editarPublicacion({
+      skinId: skin.id,
+      price: Number(ownerPrice),
+      discount: skin.discount ?? 0,
+      vendible: skin.vendible !== false,
+      intercambiable: skin.vendible !== false ? false : skin.intercambiable === true,
+    }))
+
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setSavingOwner(false)
+      return
     }
+
+    dispatch(mostrarNotificacion("Precio actualizado correctamente."))
+    setSavingOwner(false)
   }
 
   const handleDeactivate = async () => {
@@ -116,17 +121,19 @@ function Publicacion() {
     if (!confirmed) return
 
     setDeactivating(true)
-    try {
-      const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Publicación dada de baja.",
-      ))
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
-    } finally {
+    const action = await dispatch(despublicarPublicacion(skin.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setDeactivating(false)
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicación dada de baja.",
+    ))
+    setDeactivating(false)
   }
 
   const handleBuyNow = () => {

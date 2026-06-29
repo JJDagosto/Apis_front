@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { updateCurrentUser } from "../../Redux/authSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlError } from "../../utils/validations.jsx"
 import SteamLoginButton from "../SteamLoginButton.jsx"
 import "../../pages/Perfil.css"
@@ -71,31 +72,33 @@ function Perfil({ goToLogin }) {
 
     setLoading(true)
 
-    try {
-      const payload = {
-        username: currentUser.steamId64
-          ? currentUser.username
-          : form.username.trim(),
-        email: form.email.trim(),
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        tradeUrl: form.tradeUrl.trim(),
-        aliasCobro: form.aliasCobro.trim(),
-      }
-
-      if (form.password.trim()) {
-        payload.password = form.password
-      }
-
-      await dispatch(updateCurrentUser(payload)).unwrap()
-      setForm((currentForm) => ({ ...currentForm, password: "" }))
-      dispatch(mostrarNotificacion("Perfil actualizado correctamente."))
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
-    } finally {
-      setLoading(false)
+    const payload = {
+      username: currentUser.steamId64
+        ? currentUser.username
+        : form.username.trim(),
+      email: form.email.trim(),
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      tradeUrl: form.tradeUrl.trim(),
+      aliasCobro: form.aliasCobro.trim(),
     }
+
+    if (form.password.trim()) {
+      payload.password = form.password
+    }
+
+    const action = await dispatch(updateCurrentUser(payload))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      setLoading(false)
+      return
+    }
+
+    setForm((currentForm) => ({ ...currentForm, password: "" }))
+    dispatch(mostrarNotificacion("Perfil actualizado correctamente."))
+    setLoading(false)
   }
 
   return (

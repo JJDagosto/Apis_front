@@ -30,6 +30,9 @@ export const sincronizarInventario = createAsyncThunk(
       message: response.message,
     }
   },
+  {
+    condition: (_, { getState }) => !getState().inventario.syncing,
+  },
 )
 
 export const publicarInventarioItem = createAsyncThunk(
@@ -57,6 +60,9 @@ export const publicarInventarioItem = createAsyncThunk(
       message: response.message,
     }
   },
+  {
+    condition: (_, { getState }) => !getState().inventario.publishing,
+  },
 )
 
 const inventarioSlice = createSlice({
@@ -66,6 +72,7 @@ const inventarioSlice = createSlice({
     status: "idle",
     syncing: false,
     publishing: false,
+    syncMessage: "",
     error: null,
   },
   reducers: {
@@ -100,15 +107,18 @@ const inventarioSlice = createSlice({
       })
       .addCase(sincronizarInventario.pending, (state) => {
         state.syncing = true
+        state.syncMessage = ""
         state.error = null
       })
       .addCase(sincronizarInventario.fulfilled, (state, action) => {
         state.syncing = false
         state.status = "succeeded"
         state.items = action.payload.items
+        state.syncMessage = action.payload.message || "Inventario actualizado correctamente."
       })
       .addCase(sincronizarInventario.rejected, (state, action) => {
         state.syncing = false
+        state.syncMessage = ""
         state.error = action.error.message
       })
       .addCase(publicarInventarioItem.pending, (state) => {
@@ -133,6 +143,7 @@ const inventarioSlice = createSlice({
         state.status = "idle"
         state.syncing = false
         state.publishing = false
+        state.syncMessage = ""
         state.error = null
       })
   },

@@ -67,6 +67,7 @@ function App() {
   const navigate = useNavigate()
   const { checkoutCupon } = useSelector((state) => state.app)
   const currentUser = useSelector((state) => state.auth.currentUser)
+  const currentUserId = currentUser?.id
   const carrito = useSelector((state) => state.carrito.data)
   const cartItems = carrito?.items ?? []
 
@@ -75,7 +76,7 @@ function App() {
   }, [dispatch])
 
   useEffect(() => {
-    if (!currentUser) return
+    if (!currentUserId) return
 
     dispatch(fetchCarrito())
     dispatch(fetchInventario())
@@ -83,7 +84,7 @@ function App() {
     dispatch(fetchDetallePublicaciones())
     dispatch(fetchSalesNotifications())
     dispatch(fetchMisOperaciones())
-  }, [currentUser, dispatch])
+  }, [currentUserId, dispatch])
 
   const handleLogout = () => {
     dispatch(logout())

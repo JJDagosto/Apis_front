@@ -20,6 +20,7 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import ExchangeOperationsSection from "../publicaciones/ExchangeOperationsSection.jsx"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/MisPublicaciones.css"
 
@@ -124,73 +125,82 @@ function MisPublicaciones({ goToLogin }) {
   const handleDespublicar = async (skin) => {
     setError("")
     setActionId(skin.id)
-    try {
-      if (skin.localOptimistic) {
-        dispatch(despublicarPublicacionLocal(skin))
-        dispatch(mostrarNotificacion("Publicación retirada."))
-        return
-      }
-
-      const result = await dispatch(despublicarPublicacion(skin.id)).unwrap()
-      dispatch(marcarInventarioItemDisponible({
-        itemId: skin.inventarioItem?.id,
-        steamAssetId: skin.steamAssetId,
-        catalogoId: skin.catalogo?.id,
-        name: skin.name,
-      }))
-      dispatch(mostrarNotificacion(
-        result.message || "Publicación retirada. El bot devolverá la skin al inventario.",
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    if (skin.localOptimistic) {
+      dispatch(despublicarPublicacionLocal(skin))
+      dispatch(mostrarNotificacion("Publicación retirada."))
       setActionId(null)
+      return
     }
+
+    const action = await dispatch(despublicarPublicacion(skin.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      setActionId(null)
+      return
+    }
+
+    dispatch(marcarInventarioItemDisponible({
+      itemId: skin.inventarioItem?.id,
+      steamAssetId: skin.steamAssetId,
+      catalogoId: skin.catalogo?.id,
+      name: skin.name,
+    }))
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicación retirada. El bot devolverá la skin al inventario.",
+    ))
+    setActionId(null)
   }
 
   const handlePausar = async (skin) => {
     setError("")
     setActionId(skin.id)
-    try {
-      if (skin.localOptimistic) {
-        dispatch(pausarPublicacionLocal(skin))
-        dispatch(mostrarNotificacion("Publicación pausada. Podés reactivarla desde Mis publicaciones."))
-        return
-      }
-
-      const result = await dispatch(pausarPublicacion(skin.id)).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Publicacion pausada. Podés reactivarla desde Mis publicaciones.",
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    if (skin.localOptimistic) {
+      dispatch(pausarPublicacionLocal(skin))
+      dispatch(mostrarNotificacion("Publicación pausada. Podés reactivarla desde Mis publicaciones."))
       setActionId(null)
+      return
     }
+
+    const action = await dispatch(pausarPublicacion(skin.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      setActionId(null)
+      return
+    }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicacion pausada. Podés reactivarla desde Mis publicaciones.",
+    ))
+    setActionId(null)
   }
 
   const handleActivar = async (skin) => {
     setError("")
     setActionId(skin.id)
-    try {
-      if (skin.localOptimistic) {
-        dispatch(activarPublicacionLocal(skin))
-        dispatch(mostrarNotificacion("Publicación reactivada."))
-        return
-      }
-
-      const result = await dispatch(activarPublicacion(skin.id)).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Publicación reactivada.",
-      ))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    if (skin.localOptimistic) {
+      dispatch(activarPublicacionLocal(skin))
+      dispatch(mostrarNotificacion("Publicación reactivada."))
       setActionId(null)
+      return
     }
+
+    const action = await dispatch(activarPublicacion(skin.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      setActionId(null)
+      return
+    }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicación reactivada.",
+    ))
+    setActionId(null)
   }
 
   const openEdit = (skin) => {
@@ -224,39 +234,43 @@ function MisPublicaciones({ goToLogin }) {
     }
 
     setSaving(true)
-    try {
-      if (editItem.localOptimistic) {
-        const discount = discountNumber / 100
-        dispatch(editarPublicacionLocal({
-          skinId: editItem.id,
-          changes: {
-            price: priceNumber,
-            discount,
-            finalPrice: priceNumber - (priceNumber * discount),
-            vendible: true,
-            intercambiable: false,
-          },
-        }))
-        dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
-        setEditItem(null)
-        return
-      }
-
-      await dispatch(editarPublicacion({
+    if (editItem.localOptimistic) {
+      const discount = discountNumber / 100
+      dispatch(editarPublicacionLocal({
         skinId: editItem.id,
-        price: priceNumber,
-        discount: discountNumber / 100,
-        vendible: true,
-        intercambiable: false,
-      })).unwrap()
+        changes: {
+          price: priceNumber,
+          discount,
+          finalPrice: priceNumber - (priceNumber * discount),
+          vendible: true,
+          intercambiable: false,
+        },
+      }))
       dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
       setEditItem(null)
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
       setSaving(false)
+      return
     }
+
+    const action = await dispatch(editarPublicacion({
+      skinId: editItem.id,
+      price: priceNumber,
+      discount: discountNumber / 100,
+      vendible: true,
+      intercambiable: false,
+    }))
+
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      setSaving(false)
+      return
+    }
+
+    dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
+    setEditItem(null)
+    setSaving(false)
   }
 
   const renderAcciones = (skin) => {
@@ -343,16 +357,18 @@ function MisPublicaciones({ goToLogin }) {
     if (!confirmed) return
 
     setPendingActionId(orden.id)
-    try {
-      await dispatch(cancelarPagoPendiente(orden.id)).unwrap()
-      dispatch(resetCheckout())
-      dispatch(mostrarNotificacion("Pago pendiente cancelado. La publicación volvió al catálogo."))
-    } catch (err) {
-      setError(err.message)
-      dispatch(mostrarNotificacion(err.message, "error"))
-    } finally {
+    const action = await dispatch(cancelarPagoPendiente(orden.id))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
       setPendingActionId(null)
+      return
     }
+
+    dispatch(resetCheckout())
+    dispatch(mostrarNotificacion("Pago pendiente cancelado. La publicación volvió al catálogo."))
+    setPendingActionId(null)
   }
 
   const renderCompraCard = (orden, pagoPendiente = false) => {
@@ -525,7 +541,7 @@ function MisPublicaciones({ goToLogin }) {
             <ExchangeOperationsSection
               operations={intercambios}
               loading={operationsStatus === "loading"}
-              onRefresh={() => dispatch(fetchMisOperaciones())}
+              onRefresh={() => dispatch(fetchMisOperaciones({ force: true }))}
             />
 
             <section className="pub-section">

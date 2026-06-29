@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { resetUserPassword } from "../../Redux/authSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getResetPasswordError } from "../../utils/validations.jsx"
 import PasswordInput from "../PasswordInput.jsx"
 import "../../pages/Login.css"
@@ -43,14 +44,15 @@ function ResetPassword({ token, goToLogin }) {
     }
 
     setLoading(true)
-    try {
-      await dispatch(resetUserPassword({ token, password, passwordRepeat })).unwrap()
-      setDone(true)
-    } catch (err) {
-      setError(err.message)
-    } finally {
+    const action = await dispatch(resetUserPassword({ token, password, passwordRepeat }))
+    if (isRejectedAction(action)) {
+      setError(actionErrorMessage(action))
       setLoading(false)
+      return
     }
+
+    setDone(true)
+    setLoading(false)
   }
 
   if (done) {

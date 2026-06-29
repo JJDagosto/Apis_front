@@ -9,6 +9,7 @@ import {
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import "../../pages/InventarioVenta.css"
@@ -75,15 +76,17 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const handleSync = async () => {
     setError("")
 
-    try {
-      const result = await dispatch(sincronizarInventario()).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Inventario actualizado correctamente.",
-      ))
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
+    const action = await dispatch(sincronizarInventario())
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Inventario actualizado correctamente.",
+    ))
   }
 
   const openPublishModal = (item) => {
@@ -125,24 +128,27 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
       return
     }
 
-    try {
-      const result = await dispatch(publicarInventarioItem({
-        itemId: selectedItem.id,
-        price: inputPriceToUsd(price),
-        discount: discountNumber / 100,
-        vendible: true,
-        intercambiable: false,
-      })).unwrap()
-      dispatch(mostrarNotificacion(
-        result.message || "Publicación creada correctamente.",
-      ))
-      setSelectedItem(null)
-      setPrice("")
-      setDiscount("0")
-    } catch (error) {
-      setError(error.message)
-      dispatch(mostrarNotificacion(error.message, "error"))
+    const action = await dispatch(publicarInventarioItem({
+      itemId: selectedItem.id,
+      price: inputPriceToUsd(price),
+      discount: discountNumber / 100,
+      vendible: true,
+      intercambiable: false,
+    }))
+
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
     }
+
+    dispatch(mostrarNotificacion(
+      action.payload?.message || "Publicación creada correctamente.",
+    ))
+    setSelectedItem(null)
+    setPrice("")
+    setDiscount("0")
   }
 
   const getItemStatus = (item, publication, sale) => {

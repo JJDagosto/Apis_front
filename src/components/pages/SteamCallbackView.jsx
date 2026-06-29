@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { loginWithSteamToken } from "../../Redux/authSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Login.css"
 
 const processedSteamCallbacks = new Set()
@@ -35,15 +36,18 @@ function SteamCallbackView() {
     }
 
     const finishSteamLogin = async () => {
-      try {
-        const result = await dispatch(loginWithSteamToken(token)).unwrap()
-        dispatch(mostrarNotificacion("Sesión iniciada con Steam."))
-        navigate(result.user?.tradeUrl ? "/catalogo" : "/perfil", { replace: true })
-      } catch (loginError) {
+      const action = await dispatch(loginWithSteamToken(token))
+
+      if (isRejectedAction(action)) {
         processedSteamCallbacks.delete(callbackKey)
-        setMessage(loginError.message)
-        dispatch(mostrarNotificacion(loginError.message, "error"))
+        const message = actionErrorMessage(action)
+        setMessage(message)
+        dispatch(mostrarNotificacion(message, "error"))
+        return
       }
+
+      dispatch(mostrarNotificacion("Sesión iniciada con Steam."))
+      navigate(action.payload?.user?.tradeUrl ? "/catalogo" : "/perfil", { replace: true })
     }
 
     finishSteamLogin()

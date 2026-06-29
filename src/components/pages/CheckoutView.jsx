@@ -14,6 +14,7 @@ import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import CheckoutBalancePayment from "../checkout/CheckoutBalancePayment.jsx"
 import CheckoutMercadoPagoPayment from "../checkout/CheckoutMercadoPagoPayment.jsx"
 import { getMercadoPagoCheckoutUrl } from "../../utils/mercadoPagoCheckout"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Checkout.css"
 
 const getConfirmedTradeStatus = (tradeStatus) => {
@@ -93,13 +94,11 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
     if (!order?.id || completedResult || syncingRef.current) return
     syncingRef.current = true
     setLocalError("")
-    try {
-      await dispatch(sincronizarPagoCheckout()).unwrap()
-    } catch (syncError) {
-      setLocalError(syncError.message || "No se pudo verificar el pago todavía.")
-    } finally {
-      syncingRef.current = false
+    const action = await dispatch(sincronizarPagoCheckout())
+    if (isRejectedAction(action)) {
+      setLocalError(actionErrorMessage(action, "No se pudo verificar el pago todavia."))
     }
+    syncingRef.current = false
   }, [completedResult, dispatch, order?.id])
 
   useEffect(() => {
@@ -124,10 +123,9 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
       return
     }
     setLocalError("")
-    try {
-      await dispatch(pagarCheckoutConSaldo()).unwrap()
-    } catch (paymentError) {
-      setLocalError(paymentError.message)
+    const action = await dispatch(pagarCheckoutConSaldo())
+    if (isRejectedAction(action)) {
+      setLocalError(actionErrorMessage(action))
     }
   }
 
@@ -136,24 +134,26 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
     setLocalError("")
     const paymentWindow = window.open("", "_blank")
 
-    try {
-      const preparedCheckout = await dispatch(prepararMercadoPagoCheckout()).unwrap()
-      const paymentUrl = getMercadoPagoCheckoutUrl(preparedCheckout)
-
-      if (paymentUrl) {
-        if (paymentWindow) {
-          paymentWindow.location.href = paymentUrl
-        } else {
-          window.location.assign(paymentUrl)
-        }
-      } else {
-        paymentWindow?.close()
-        throw new Error("Mercado Pago no devolvió una URL de Checkout Pro.")
-      }
-    } catch (paymentError) {
+    const action = await dispatch(prepararMercadoPagoCheckout())
+    if (isRejectedAction(action)) {
       paymentWindow?.close()
-      setLocalError(paymentError.message)
+      setLocalError(actionErrorMessage(action))
+      return
     }
+
+    const paymentUrl = getMercadoPagoCheckoutUrl(action.payload)
+
+    if (paymentUrl) {
+      if (paymentWindow) {
+        paymentWindow.location.href = paymentUrl
+      } else {
+        window.location.assign(paymentUrl)
+      }
+      return
+    }
+
+    paymentWindow?.close()
+    setLocalError("Mercado Pago no devolvio una URL de Checkout Pro.")
   }
 
   if (!currentUser) {

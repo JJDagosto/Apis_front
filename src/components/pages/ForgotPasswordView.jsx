@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { requestPasswordReset } from "../../Redux/authSlice"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Login.css"
 
 function ForgotPassword({ goToLogin }) {
@@ -19,15 +20,16 @@ function ForgotPassword({ goToLogin }) {
     setMessage("")
     setLoading(true)
 
-    try {
-      // El back responde el mismo mensaje exista o no el email (por privacidad).
-      const msg = await dispatch(requestPasswordReset(email)).unwrap()
-      setMessage(msg || "Si el email esta registrado, te enviamos un link para cambiar la contraseña.")
-    } catch (err) {
-      setError(err.message)
-    } finally {
+    // El back responde el mismo mensaje exista o no el email (por privacidad).
+    const action = await dispatch(requestPasswordReset(email))
+    if (isRejectedAction(action)) {
+      setError(actionErrorMessage(action))
       setLoading(false)
+      return
     }
+
+    setMessage(action.payload || "Si el email esta registrado, te enviamos un link para cambiar la contraseña.")
+    setLoading(false)
   }
 
   return (

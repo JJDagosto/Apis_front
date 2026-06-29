@@ -8,6 +8,7 @@ import {
 } from "../Redux/authSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { getMercadoPagoCheckoutUrl } from "../utils/mercadoPagoCheckout"
+import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 import "./BalanceTopUpModal.css"
 
 const QUICK_AMOUNTS = [1500, 3000, 7000, 10000, 20000, 50000]
@@ -75,24 +76,27 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     syncingRef.current = true
     setLocalError("")
     setStatusMessage("")
-    try {
-      const result = await dispatch(sincronizarRecargaSaldo()).unwrap()
-      if (isApproved(result.payment)) {
-        const creditedUsd = Number(result.payment?.order?.priceDifference ?? amountUsd)
-        dispatch(mostrarNotificacion(
-          `Se acreditaron $${creditedUsd.toFixed(2)} USD a tu saldo.`,
-          "success",
-        ))
-        dispatch(clearBalanceCheckout())
-        onClose()
-        return
-      }
-      setStatusMessage("El pago todavía está pendiente en Mercado Pago.")
-    } catch (requestError) {
-      setLocalError(requestError.message || "No se pudo verificar la recarga todavía.")
-    } finally {
+    const action = await dispatch(sincronizarRecargaSaldo())
+    if (isRejectedAction(action)) {
+      setLocalError(actionErrorMessage(action, "No se pudo verificar la recarga todavia."))
       syncingRef.current = false
+      return
     }
+
+    const result = action.payload
+    if (isApproved(result.payment)) {
+      const creditedUsd = Number(result.payment?.order?.priceDifference ?? amountUsd)
+      dispatch(mostrarNotificacion(
+        `Se acreditaron $${creditedUsd.toFixed(2)} USD a tu saldo.`,
+        "success",
+      ))
+      dispatch(clearBalanceCheckout())
+      syncingRef.current = false
+      onClose()
+      return
+    }
+    setStatusMessage("El pago todavia esta pendiente en Mercado Pago.")
+    syncingRef.current = false
   }, [amountUsd, balanceCheckout?.order?.id, dispatch, onClose])
 
   useEffect(() => {
@@ -120,29 +124,34 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     }
 
     const paymentWindow = window.open("", "_blank")
-    try {
-      const checkout = await dispatch(prepararRecargaSaldo({
-        amountArs: Number(amountArs.toFixed(2)),
-      })).unwrap()
-      const paymentUrl = getMercadoPagoCheckoutUrl(checkout)
+    const action = await dispatch(prepararRecargaSaldo({
+      amountArs: Number(amountArs.toFixed(2)),
+    }))
 
-      if (!paymentUrl) {
-        paymentWindow?.close()
-        throw new Error("Mercado Pago no devolvió una URL de checkout.")
-      }
-
-      if (paymentWindow) {
-        paymentWindow.location.href = paymentUrl
-      } else {
-        window.location.assign(paymentUrl)
-      }
-      setStatusMessage("Completá el pago en Mercado Pago y luego volvé a esta pestaña.")
-    } catch (requestError) {
+    if (isRejectedAction(action)) {
       paymentWindow?.close()
-      const message = requestError.message || "No se pudo iniciar la recarga."
+      const message = actionErrorMessage(action, "No se pudo iniciar la recarga.")
       setLocalError(message)
       dispatch(mostrarNotificacion(message, "error"))
+      return
     }
+
+    const paymentUrl = getMercadoPagoCheckoutUrl(action.payload)
+
+    if (!paymentUrl) {
+      paymentWindow?.close()
+      const message = "Mercado Pago no devolvio una URL de checkout."
+      setLocalError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
+    }
+
+    if (paymentWindow) {
+      paymentWindow.location.href = paymentUrl
+    } else {
+      window.location.assign(paymentUrl)
+    }
+    setStatusMessage("Completa el pago en Mercado Pago y luego volve a esta pestana.")
   }
 
   return (

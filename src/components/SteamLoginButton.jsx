@@ -3,6 +3,7 @@ import { FaSteam } from "react-icons/fa"
 import { useDispatch } from "react-redux"
 import { fetchSteamLoginUrl } from "../Redux/authSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
+import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 
 function SteamLoginButton({
   className = "",
@@ -15,17 +16,19 @@ function SteamLoginButton({
   const handleSteamLogin = async () => {
     setStarting(true)
 
-    try {
-      const redirectUrl = `${window.location.origin}/login/steam/callback`
-      const loginUrl = await dispatch(fetchSteamLoginUrl({ redirectUrl })).unwrap()
-      window.location.assign(loginUrl)
-    } catch (error) {
+    const redirectUrl = `${window.location.origin}/login/steam/callback`
+    const action = await dispatch(fetchSteamLoginUrl({ redirectUrl }))
+
+    if (isRejectedAction(action)) {
       setStarting(false)
       dispatch(mostrarNotificacion(
-        error.message || "No se pudo iniciar sesión con Steam.",
+        actionErrorMessage(action, "No se pudo iniciar sesión con Steam."),
         "error",
       ))
+      return
     }
+
+    window.location.assign(action.payload)
   }
 
   return (

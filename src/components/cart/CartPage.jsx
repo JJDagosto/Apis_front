@@ -10,6 +10,7 @@ import { eliminarItemCarrito, vaciarCarrito } from "../../Redux/carritoSlice"
 import { prepararCheckoutCarrito } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { getCartTotals } from "../../utils/cartTotals"
+import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
 import CartEmptyState from "./CartEmptyState.jsx"
 import CartList from "./CartList.jsx"
@@ -50,8 +51,8 @@ function CartPage() {
       <main className="cart-page">
         <CartEmptyState
           title="Carrito"
-          message="Necesitás iniciar sesión para ver tu carrito."
-          actionLabel="Iniciar sesión"
+          message="Necesitas iniciar sesion para ver tu carrito."
+          actionLabel="Iniciar sesion"
           onAction={() => navigate("/login")}
         />
       </main>
@@ -66,25 +67,29 @@ function CartPage() {
   const handleRemove = async (itemId) => {
     setError("")
 
-    try {
-      await dispatch(eliminarItemCarrito(itemId)).unwrap()
-      dispatch(mostrarNotificacion("Ítem eliminado del carrito."))
-    } catch (removeError) {
-      setError(removeError.message)
-      dispatch(mostrarNotificacion(removeError.message, "error"))
+    const action = await dispatch(eliminarItemCarrito(itemId))
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
     }
+
+    dispatch(mostrarNotificacion("Item eliminado del carrito."))
   }
 
   const handleClear = async () => {
     setError("")
 
-    try {
-      await dispatch(vaciarCarrito()).unwrap()
-      dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
-    } catch (clearError) {
-      setError(clearError.message)
-      dispatch(mostrarNotificacion(clearError.message, "error"))
+    const action = await dispatch(vaciarCarrito())
+    if (isRejectedAction(action)) {
+      const message = actionErrorMessage(action)
+      setError(message)
+      dispatch(mostrarNotificacion(message, "error"))
+      return
     }
+
+    dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
   }
 
   const handleCheckout = () => {
@@ -118,11 +123,9 @@ function CartPage() {
       return
     }
 
-    try {
-      await dispatch(validarCheckoutCupon(normalizedCupon)).unwrap()
-      dispatch(mostrarNotificacion("Cupón válido."))
-    } catch {
-      // El error del cupón se muestra junto al input desde Redux.
+    const action = await dispatch(validarCheckoutCupon(normalizedCupon))
+    if (!isRejectedAction(action)) {
+      dispatch(mostrarNotificacion("Cupon valido."))
     }
   }
 
@@ -145,9 +148,9 @@ function CartPage() {
 
       {!loading && items.length === 0 && (
         <CartEmptyState
-          title="Tu carrito está vacío"
-          message="Agregá una skin desde el catálogo para verla acá."
-          actionLabel="Ir al catálogo"
+          title="Tu carrito esta vacio"
+          message="Agrega una skin desde el catalogo para verla aca."
+          actionLabel="Ir al catalogo"
           onAction={() => navigate("/catalogo")}
           showIcon
         />
