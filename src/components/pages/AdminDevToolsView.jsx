@@ -10,6 +10,9 @@ import {
   fetchAdminDashboard,
   inactivarSkinAdmin,
 } from "../../Redux/adminSlice"
+import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
+import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
+import { DEFAULT_USD_TO_ARS } from "../../utils/currency"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getPercentRangeError, getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/AdminDevTools.css"
@@ -29,6 +32,8 @@ const exteriorOrder = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn
 const PUBLICACIONES_POR_PAGINA = 10
 const CLAIM_PAYMENT_STATUSES = new Set(["REJECTED", "CANCELLED", "REFUNDED", "CHARGED_BACK"])
 const CLAIM_TRADE_STATUSES = new Set(["CANCELLED", "FAILED", "RETURN_PENDING", "RETURN_FAILED"])
+
+const parseDecimalInput = (value) => Number(String(value).replace(",", "."))
 
 const getExteriorSortValue = (item) => {
   const index = exteriorOrder.indexOf(item.exteriorName)
@@ -51,6 +56,7 @@ function AdminDevTools({ goToCatalogo }) {
   const navigate = useNavigate()
   const openCatalogo = goToCatalogo ?? (() => navigate("/catalogo"))
   const currentUser = useSelector((state) => state.auth.currentUser)
+  const { rate, formatPrice } = useCurrencyFormatter()
   const {
     publicaciones,
     cupones,
@@ -78,6 +84,7 @@ function AdminDevTools({ goToCatalogo }) {
 
   const isAdmin = currentUser?.role === "ADMIN"
   const loading = status === "loading"
+  const usdToArs = Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_USD_TO_ARS
 
   useEffect(() => {
     if (isAdmin) {
@@ -182,7 +189,7 @@ function AdminDevTools({ goToCatalogo }) {
     setSelectedCatalog(null)
 
     if (!catalogSearch.trim()) {
-      setError("Escribí un nombre para buscar en el catálogo.")
+      dispatch(mostrarNotificacion("Escribí un nombre para buscar en el catálogo.", "error"))
       return
     }
 
@@ -195,25 +202,26 @@ function AdminDevTools({ goToCatalogo }) {
 
     const seller = resolveSeller()
     if (!selectedCatalog) {
-      setError("Elegí una skin del catálogo.")
+      dispatch(mostrarNotificacion("Elegí una skin del catálogo.", "error"))
       return
     }
     if (!seller) {
-      setError("Elegí un vendedor de la lista de usuarios.")
+      dispatch(mostrarNotificacion("Elegí un vendedor de la lista de usuarios.", "error"))
       return
     }
     const priceError = getPositivePriceError(price)
     if (priceError) {
-      setError(priceError)
+      dispatch(mostrarNotificacion(priceError, "error"))
       return
     }
+    const priceArs = parseDecimalInput(price)
 
     setActionId("create-skin")
     dispatch(crearSkinAdminParaUsuario({
       vendedorEmail: seller.email,
       payload: {
         catalogoId: selectedCatalog.id,
-        price: Number(price),
+        price: priceArs / usdToArs,
         discount: 0,
         stock: 1,
       },
@@ -238,13 +246,13 @@ function AdminDevTools({ goToCatalogo }) {
     setError("")
 
     if (!couponForm.codigo.trim()) {
-      setError("El cupón necesita código.")
+      dispatch(mostrarNotificacion("El cupón necesita código.", "error"))
       return
     }
 
     const discountError = getPercentRangeError(couponForm.descuentoPct)
     if (discountError) {
-      setError(discountError)
+      dispatch(mostrarNotificacion(discountError, "error"))
       return
     }
 
@@ -358,7 +366,7 @@ function AdminDevTools({ goToCatalogo }) {
                       <span>#{skin.id} - {skin.catalogo?.weaponName ?? skin.game}</span>
                       <strong>{limpiarNombreSkin(skin.name)}</strong>
                     </div>
-                    <span>${Number(skin.price ?? 0).toFixed(2)}</span>
+                    <span>{formatPrice(skin.finalPrice ?? skin.price)}</span>
                     <span className={skin.active === false ? "admin-status off" : "admin-status on"}>
                       {skin.active === false ? "Inactiva" : "Activa"}
                     </span>
@@ -535,7 +543,7 @@ function AdminDevTools({ goToCatalogo }) {
                   step="0.01"
                   value={price}
                   onChange={(event) => setPrice(event.target.value)}
-                  placeholder="Precio"
+                  placeholder="Precio ARS"
                 />
                 <button type="submit" disabled={actionId === "create-skin"}>
                   <FaPlus /> Crear skin

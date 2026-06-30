@@ -9,13 +9,23 @@ import {
 import { getMercadoPagoCheckoutUrl } from "../utils/mercadoPagoCheckout"
 import "./BalanceTopUpModal.css"
 
-const QUICK_AMOUNTS = [1500, 3000, 7000, 10000, 20000, 50000]
+const MIN_AMOUNT_ARS = 1500
+const MAX_BALANCE_USD = 3000
+const QUICK_AMOUNTS = {
+  ARS: [1500, 3000, 7000, 10000, 20000, 50000],
+  USD: [5, 10, 20, 50, 100, 250],
+}
 
 const formatArs = (value) => new Intl.NumberFormat("es-AR", {
   style: "currency",
   currency: "ARS",
   minimumFractionDigits: 2,
 }).format(value)
+
+const formatUsd = (value) => `USD ${Number(value).toLocaleString("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})}`
 
 const isApproved = (payment) => (
   payment?.status === "approved" || payment?.order?.paymentStatus === "PAID"
@@ -31,10 +41,10 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     balanceError,
   } = useSelector((state) => state.auth)
   const rate = Number(currentUser?.usdToArs ?? 1451.02)
-  const maxAmountArs = rate * 3000
+  const maxAmountArs = rate * MAX_BALANCE_USD
   const requestedAmountArs = Number(initialAmountUsd) * rate
   const defaultAmountArs = Math.min(
-    Math.max(requestedAmountArs || 1500, 1500),
+    Math.max(requestedAmountArs || MIN_AMOUNT_ARS, MIN_AMOUNT_ARS),
     maxAmountArs,
   )
   const [currency, setCurrency] = useState("ARS")
@@ -51,7 +61,18 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     return currency === "ARS" ? value : value * rate
   }, [currency, inputValue, rate])
   const amountUsd = amountArs / rate
-  const amountIsValid = amountArs >= 1500 && amountArs <= maxAmountArs
+  const amountIsValid = amountArs >= MIN_AMOUNT_ARS && amountArs <= maxAmountArs
+  const selectedAmount = currency === "ARS" ? amountArs : amountUsd
+  const quickAmounts = QUICK_AMOUNTS[currency]
+  const formatSelectedAmount = (value) => (
+    currency === "ARS" ? formatArs(value) : formatUsd(value)
+  )
+  const minDisplayAmount = currency === "ARS"
+    ? MIN_AMOUNT_ARS
+    : MIN_AMOUNT_ARS / rate
+  const maxDisplayAmount = currency === "ARS"
+    ? maxAmountArs
+    : MAX_BALANCE_USD
   const preparedAmount = Number(balanceCheckout?.order?.totalFinal)
   const preparedForAmount = Boolean(balanceCheckout?.order?.id) &&
     Math.abs(preparedAmount - amountArs) < 0.01
@@ -127,7 +148,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     setStatusMessage("")
 
     if (!amountIsValid) {
-      setLocalError(`Ingresá un importe entre ${formatArs(1500)} y ${formatArs(maxAmountArs)}.`)
+      setLocalError(`Ingresá un importe entre ${formatSelectedAmount(minDisplayAmount)} y ${formatSelectedAmount(maxDisplayAmount)}.`)
       return
     }
 
@@ -161,7 +182,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
         </button>
 
         <header>
-          <h2 id="balance-title">Añadir fondos para intercambiar</h2>
+          <h2 id="balance-title">Añadir saldo</h2>
         </header>
 
         <div className="balance-modal-layout">
@@ -190,22 +211,21 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
                 required
               />
             </div>
-            <small>Límite: {formatArs(1500)} a {formatArs(maxAmountArs)}</small>
+            <small>Límite: {formatSelectedAmount(minDisplayAmount)} a {formatSelectedAmount(maxDisplayAmount)}</small>
 
             <div className="balance-quick-grid">
-              {QUICK_AMOUNTS.map((amount) => (
+              {quickAmounts.map((amount) => (
                 <button
                   type="button"
                   key={amount}
-                  className={Math.abs(amountArs - amount) < 0.01 ? "active" : ""}
+                  className={Math.abs(selectedAmount - amount) < 0.01 ? "active" : ""}
                   onClick={() => {
-                    setCurrency("ARS")
                     setInputValue(String(amount))
                     setLocalError("")
                     setStatusMessage("")
                   }}
                 >
-                  {formatArs(amount)}
+                  {formatSelectedAmount(amount)}
                 </button>
               ))}
             </div>
@@ -234,7 +254,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
                   disabled={!amountIsValid || busy}
                 >
                   <FaExternalLinkAlt />
-                  {balanceLoading ? "Abriendo Mercado Pago..." : `Continuar por ${formatArs(amountArs)}`}
+                  {balanceLoading ? "Abriendo Mercado Pago..." : `Continuar por ${formatSelectedAmount(selectedAmount)}`}
                 </button>
                 {checkoutUrl && (
                   <button
@@ -260,16 +280,16 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
           <aside className="balance-summary-panel">
             <div className="balance-summary-title">
               <FaWallet />
-              <div><strong>Saldo de intercambio</strong><span>Recarga con Mercado Pago</span></div>
+              <div><strong>Saldo</strong><span>Recarga con Mercado Pago</span></div>
             </div>
             <dl>
-              <div><dt>Tasa de conversión</dt><dd>$1.00 = {formatArs(rate)}</dd></div>
+              <div><dt>Tasa de conversión</dt><dd>USD 1.00 = {formatArs(rate)}</dd></div>
               <div><dt>Método de pago</dt><dd>Mercado Pago</dd></div>
-              <div><dt>Tu pago</dt><dd>{formatArs(amountArs)}</dd></div>
+              <div><dt>Tu pago</dt><dd>{formatSelectedAmount(selectedAmount)}</dd></div>
             </dl>
             <div className="balance-credit-total">
               <span>Se acreditan</span>
-              <strong>${Number.isFinite(amountUsd) ? amountUsd.toFixed(2) : "0.00"} USD</strong>
+              <strong>{formatUsd(Number.isFinite(amountUsd) ? amountUsd : 0)}</strong>
             </div>
             {busy && <p className="balance-processing">Conectando con Mercado Pago...</p>}
             <p className="balance-summary-help">

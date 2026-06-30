@@ -423,7 +423,7 @@ const checkoutSlice = createSlice({
         preferenceId: order?.mercadopagoPreferenceId,
       }
 
-      state.session = { email, cupon: "", data }
+      state.session = { email, cupon: "", data, mode: "cart" }
       state.instantItem = null
       state.data = data
       state.status = "succeeded"

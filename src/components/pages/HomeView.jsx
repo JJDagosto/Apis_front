@@ -28,7 +28,7 @@ function Home({ goToCatalogo, goToSell, goToInfo, currentUser }) {
   const navigate = useNavigate()
   const catalogItems = useSelector((state) => state.catalogo.items)
   const getFeaturedPrice = (skin) =>
-    Number(skin.estimatedTradePrice ?? skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0)
+    Number(skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0)
   const featuredSkins = useMemo(() => (
     catalogItems
       .filter((skin) => skin.active !== false)

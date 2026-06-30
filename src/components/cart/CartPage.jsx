@@ -27,8 +27,17 @@ function CartPage() {
     couponStatus,
     couponError,
   } = useSelector((state) => state.app)
-  const checkoutNeedsPreparation = useSelector((state) => {
+  const checkoutShouldResetForCart = useSelector((state) => {
     const checkout = state.checkout
+    const reusableCartCheckout = Boolean(
+      !checkout.instantItem &&
+        !checkout.result &&
+        checkout.session?.mode === "cart" &&
+        checkout.session?.data?.order?.id,
+    )
+
+    if (reusableCartCheckout) return false
+
     return Boolean(
       checkout.instantItem ||
         checkout.session ||
@@ -85,7 +94,7 @@ function CartPage() {
       return
     }
 
-    if (checkoutNeedsPreparation) {
+    if (checkoutShouldResetForCart) {
       dispatch(prepararCheckoutCarrito())
     }
     dispatch(setCheckoutCupon(cupon))

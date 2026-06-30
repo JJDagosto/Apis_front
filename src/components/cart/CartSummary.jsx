@@ -118,10 +118,6 @@ function CartSummary({
       >
         Continuar compra
       </button>
-      <small>
-        El cupón se descuenta cuando el backend crea la orden. Acá ves la suma
-        del carrito y los descuentos de publicaciones.
-      </small>
     </aside>
   )
 }

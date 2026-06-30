@@ -114,7 +114,7 @@ const displayPriceToUsd = (value, currency, rate) => {
 }
 
 const getSkinPrice = (skin) => Number(
-  skin.estimatedTradePrice ?? skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0,
+  skin.finalPrice ?? skin.precioFinal ?? skin.price ?? 0,
 )
 
 const catalogoSlice = createSlice({

@@ -25,7 +25,7 @@ function ComoFunciona() {
         <h2>Publicar una skin</h2>
         <ul className="info-steps">
           <li>Iniciás sesión con Steam y sincronizás tu inventario público de CS2.</li>
-          <li>El sistema reconoce cada skin contra el catálogo y calcula un precio sugerido desde Steam Community Market con un margen del 8%.</li>
+          <li>Te mostramos un precio sugerido para que tengas una referencia antes de publicar.</li>
           <li>Antes de publicar podés modificar el precio y agregar un descuento adicional.</li>
           <li>Al confirmar, la publicación queda vendible en el Market y la skin no se puede usar en intercambio mientras esté publicada.</li>
           <li>Desde Mis publicaciones podés ver estado, pagos pendientes, reservas, ventas y operaciones relacionadas.</li>
@@ -37,7 +37,7 @@ function ComoFunciona() {
         <ul className="info-steps">
           <li>Elegís una o más skins de tu inventario para enviar.</li>
           <li>Elegís una o más skins del Market para recibir.</li>
-          <li>El sistema cotiza ambas partes con precios del mercado de Steam menos el 8% configurado.</li>
+          <li>Comparamos el valor de ambos lados para calcular si hay diferencia.</li>
           <li>Si tu oferta vale menos, se usa automáticamente tu saldo y se muestra cuánto falta cargar.</li>
           <li>Si tu oferta vale más, la diferencia queda como saldo a favor.</li>
           <li>Al confirmar, la orden queda registrada y el bot prepara el movimiento de las skins.</li>
@@ -47,30 +47,28 @@ function ComoFunciona() {
       <section className="info-card">
         <h2>Pagos y saldo</h2>
         <p>
-          Mercado Pago se abre fuera de la aplicación para que el usuario elija tarjeta, dinero
-          disponible u otro medio habilitado. En el entorno de prueba se usan cuentas sandbox y
-          credenciales TEST, por eso no se debe pagar con una cuenta real.
+          Podés pagar una compra con tu saldo disponible o continuar por Mercado Pago para elegir
+          el medio que prefieras.
         </p>
         <p>
-          El saldo sirve para completar diferencias de intercambio. Si no alcanza, la plataforma
-          muestra el faltante y permite cargar fondos desde Mercado Pago.
+          El saldo también sirve para intercambios. Si te falta plata para completar una operación,
+          vas a ver cuánto necesitás cargar antes de confirmar.
         </p>
       </section>
 
       <section className="info-card">
         <h2>Reglas importantes</h2>
         <p>
-          <strong>Steam Trade URL:</strong> Steam OpenID nos da el identificador de la cuenta,
-          pero no entrega la Trade URL. Por eso se carga manualmente desde Mi cuenta.
+          <strong>Tu enlace de intercambio:</strong> para recibir skins necesitás cargar tu Steam
+          Trade URL desde Mi cuenta.
         </p>
         <p>
-          <strong>Bloqueo de Steam:</strong> algunas skins pueden quedar bloqueadas hasta 7 días
-          por reglas de Steam. La publicación puede quedar reservada hasta que sea entregable.
+          <strong>Tiempos de Steam:</strong> algunas skins pueden tardar unos días en estar listas
+          para enviarse. Si pasa, te vamos a mostrar el estado de la operación.
         </p>
         <p>
-          <strong>Publicada, reservada o vendida:</strong> una skin publicada está disponible,
-          una reservada ya pertenece a una orden en proceso, y una vendida ya no puede volver a
-          comprarse ni pagarse por segunda vez.
+          <strong>Reservas:</strong> cuando alguien inicia una compra, la skin queda apartada para
+          esa orden. Si el pago se cancela, vuelve a estar disponible.
         </p>
       </section>
     </main>
