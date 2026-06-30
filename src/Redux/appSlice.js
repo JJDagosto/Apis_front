@@ -1,16 +1,24 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
+import { mostrarNotificacion } from "./notificacionesSlice"
 
 export const validarCheckoutCupon = createAsyncThunk(
   "app/validarCheckoutCupon",
-  async (codigo, { getState }) => {
-    const token = getState().auth.token
-    const response = await apiRequest(
-      `/cupones/validar?codigo=${encodeURIComponent(codigo)}`,
-      {},
-      token,
-    )
-    return response.data
+  async (codigo, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const token = getState().auth.token
+      const response = await apiRequest(
+        `/cupones/validar?codigo=${encodeURIComponent(codigo)}`,
+        {},
+        token,
+      )
+      dispatch(mostrarNotificacion("Cupon valido."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo validar el cupon."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
@@ -60,7 +68,7 @@ const appSlice = createSlice({
       .addCase(validarCheckoutCupon.rejected, (state, action) => {
         state.couponStatus = "failed"
         state.couponValidation = null
-        state.couponError = action.error.message
+        state.couponError = action.payload || action.error.message
       })
   },
 })

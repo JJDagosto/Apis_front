@@ -10,7 +10,6 @@ import { eliminarItemCarrito, vaciarCarrito } from "../../Redux/carritoSlice"
 import { prepararCheckoutCarrito } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { getCartTotals } from "../../utils/cartTotals"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
 import CartEmptyState from "./CartEmptyState.jsx"
 import CartList from "./CartList.jsx"
@@ -64,32 +63,14 @@ function CartPage() {
   const tradeUrlIssue = getTradeUrlIssue(currentUser, "comprar")
   const displayError = error || cartError
 
-  const handleRemove = async (itemId) => {
+  const handleRemove = (itemId) => {
     setError("")
-
-    const action = await dispatch(eliminarItemCarrito(itemId))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    dispatch(mostrarNotificacion("Item eliminado del carrito."))
+    dispatch(eliminarItemCarrito(itemId))
   }
 
-  const handleClear = async () => {
+  const handleClear = () => {
     setError("")
-
-    const action = await dispatch(vaciarCarrito())
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
+    dispatch(vaciarCarrito())
   }
 
   const handleCheckout = () => {
@@ -116,17 +97,14 @@ function CartPage() {
     dispatch(clearCheckoutCuponValidation())
   }
 
-  const handleValidateCupon = async () => {
+  const handleValidateCupon = () => {
     const normalizedCupon = cupon.trim()
     if (!normalizedCupon) {
       dispatch(clearCheckoutCuponValidation())
       return
     }
 
-    const action = await dispatch(validarCheckoutCupon(normalizedCupon))
-    if (!isRejectedAction(action)) {
-      dispatch(mostrarNotificacion("Cupon valido."))
-    }
+    dispatch(validarCheckoutCupon(normalizedCupon))
   }
 
   return (

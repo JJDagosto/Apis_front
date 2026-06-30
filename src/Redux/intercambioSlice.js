@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout, setCurrentUserBalance } from "./authSlice"
+import { fetchInventario, sincronizarInventario } from "./inventarioSlice"
+import { mostrarNotificacion } from "./notificacionesSlice"
 
 const toggleId = (ids, id) => {
   const normalizedId = String(id)
@@ -17,6 +19,29 @@ const requestBody = ({ inventarioItemIds, skinIds }) => ({
   inventarioItemIds: inventarioItemIds.map(Number),
   skinIds: skinIds.map(Number),
 })
+
+const canOfferInventoryItem = (item) => (
+  Boolean(item?.catalogo) &&
+  !item.publicado &&
+  !item.pending &&
+  item.tradable !== false
+)
+
+const pruneOfferedInventoryItems = (state, inventoryItems = []) => {
+  const validInventoryIds = new Set(
+    inventoryItems
+      .filter(canOfferInventoryItem)
+      .map((item) => String(item.id)),
+  )
+  const nextIds = state.offeredInventoryItemIds.filter((itemId) => (
+    validInventoryIds.has(String(itemId))
+  ))
+
+  if (nextIds.length !== state.offeredInventoryItemIds.length) {
+    state.offeredInventoryItemIds = nextIds
+    resetQuote(state)
+  }
+}
 
 export const cotizarIntercambio = createAsyncThunk(
   "intercambio/cotizarIntercambio",
@@ -46,22 +71,31 @@ export const cotizarIntercambio = createAsyncThunk(
 
 export const crearIntercambio = createAsyncThunk(
   "intercambio/crearIntercambio",
-  async (selection, { dispatch, getState }) => {
-    const stateBefore = getState()
-    const response = await apiRequest(
-      "/operations/exchange",
-      {
-        method: "POST",
-        body: JSON.stringify(requestBody(selection)),
-      },
-      stateBefore.auth.token,
-    )
-    const amountPaid = Number(stateBefore.intercambio.quote?.montoAPagar ?? 0)
-    const currentBalance = Number(stateBefore.auth.currentUser?.saldo ?? 0)
-    if (amountPaid > 0) {
-      dispatch(setCurrentUserBalance(Math.max(currentBalance - amountPaid, 0)))
+  async (selection, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const stateBefore = getState()
+      const response = await apiRequest(
+        "/operations/exchange",
+        {
+          method: "POST",
+          body: JSON.stringify(requestBody(selection)),
+        },
+        stateBefore.auth.token,
+      )
+      const amountPaid = Number(stateBefore.intercambio.quote?.montoAPagar ?? 0)
+      const currentBalance = Number(stateBefore.auth.currentUser?.saldo ?? 0)
+      if (amountPaid > 0) {
+        dispatch(setCurrentUserBalance(Math.max(currentBalance - amountPaid, 0)))
+      }
+      dispatch(mostrarNotificacion(
+        `Intercambio #${response.data.id} creado correctamente. Revisa su estado en Mis publicaciones.`,
+      ))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo crear el intercambio."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
-    return response.data
   },
   {
     condition: (_, { getState }) => !getState().intercambio.submitting,
@@ -182,8 +216,8 @@ const intercambioSlice = createSlice({
       })
       .addCase(crearIntercambio.rejected, (state, action) => {
         state.submitting = false
-        state.submitError = action.error.message
-        state.quoteError = action.error.message
+        state.submitError = action.payload || action.error.message
+        state.quoteError = action.payload || action.error.message
       })
       .addCase(fetchMisOperaciones.pending, (state) => {
         state.operationsStatus = "loading"
@@ -196,6 +230,12 @@ const intercambioSlice = createSlice({
       .addCase(fetchMisOperaciones.rejected, (state, action) => {
         state.operationsStatus = "failed"
         state.operationsError = action.error.message
+      })
+      .addCase(fetchInventario.fulfilled, (state, action) => {
+        pruneOfferedInventoryItems(state, action.payload)
+      })
+      .addCase(sincronizarInventario.fulfilled, (state, action) => {
+        pruneOfferedInventoryItems(state, action.payload.items)
       })
       .addCase(logout, () => initialState)
   },

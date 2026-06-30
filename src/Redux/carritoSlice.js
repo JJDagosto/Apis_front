@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout } from "./authSlice"
+import { mostrarNotificacion } from "./notificacionesSlice"
 import {
   iniciarCheckout,
   pagarCheckoutConSaldo,
@@ -24,37 +25,58 @@ export const fetchCarrito = createAsyncThunk(
 
 export const agregarAlCarrito = createAsyncThunk(
   "carrito/agregarAlCarrito",
-  async (skinId, { getState }) => {
-    const response = await apiRequest(
-      `/carrito/skins/${skinId}?cantidad=1`,
-      { method: "PATCH" },
-      getToken(getState),
-    )
-    return response.data
+  async (skinId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        `/carrito/skins/${skinId}?cantidad=1`,
+        { method: "PATCH" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion("Item agregado al carrito con exito."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo agregar el item al carrito."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const eliminarItemCarrito = createAsyncThunk(
   "carrito/eliminarItemCarrito",
-  async (itemId, { getState }) => {
-    const response = await apiRequest(
-      `/carrito/items/${itemId}`,
-      { method: "DELETE" },
-      getToken(getState),
-    )
-    return response.data
+  async (itemId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        `/carrito/items/${itemId}`,
+        { method: "DELETE" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion("Item eliminado del carrito."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo eliminar el item del carrito."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const vaciarCarrito = createAsyncThunk(
   "carrito/vaciarCarrito",
-  async (_, { getState }) => {
-    const response = await apiRequest(
-      "/carrito",
-      { method: "DELETE" },
-      getToken(getState),
-    )
-    return response.data
+  async (_, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        "/carrito",
+        { method: "DELETE" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion("Carrito vaciado correctamente."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo vaciar el carrito."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
@@ -95,7 +117,7 @@ const carritoSlice = createSlice({
       })
       .addCase(agregarAlCarrito.rejected, (state, action) => {
         state.updating = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(eliminarItemCarrito.pending, (state) => {
         state.updating = true
@@ -107,7 +129,7 @@ const carritoSlice = createSlice({
       })
       .addCase(eliminarItemCarrito.rejected, (state, action) => {
         state.updating = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(vaciarCarrito.pending, (state) => {
         state.updating = true
@@ -119,7 +141,7 @@ const carritoSlice = createSlice({
       })
       .addCase(vaciarCarrito.rejected, (state, action) => {
         state.updating = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(iniciarCheckout.fulfilled, (state, action) => {
         if (action.payload.cart) {

@@ -121,6 +121,8 @@ const catalogoSlice = createSlice({
   name: "catalogo",
   initialState: {
     items: [],
+    currentItem: null,
+    detail: null,
     filters: { ...initialFilters },
     sortOrder: "",
     searchTerm: "",
@@ -154,6 +156,14 @@ const catalogoSlice = createSlice({
       state.filters = { ...initialFilters }
       state.sortOrder = ""
       state.searchTerm = ""
+    },
+    setCurrentItem: (state, action) => {
+      const skinId = action.payload
+      state.currentItem = state.items.find((item) => String(item.id) === String(skinId)) ?? null
+    },
+    clearCurrentItem: (state) => {
+      state.currentItem = null
+      state.detail = null
     },
   },
   extraReducers: (builder) => {
@@ -272,11 +282,14 @@ export const {
   setCatalogSearchTerm,
   clearCatalogSearch,
   resetCatalogFilters,
+  setCurrentItem,
+  clearCurrentItem,
 } = catalogoSlice.actions
 
 export const selectCatalogFilters = (state) => state.catalogo.filters
 export const selectCatalogSearchTerm = (state) => state.catalogo.searchTerm
 export const selectCatalogSortOrder = (state) => state.catalogo.sortOrder
+export const selectCurrentCatalogItem = (state) => state.catalogo.currentItem
 
 export const selectFilteredCatalogItems = createSelector(
   [

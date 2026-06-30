@@ -9,7 +9,6 @@ function CatalogGrid({
   getCartItemBySkinId,
   isOwnPublication,
   onCartClick,
-  onOpenPublication,
 }) {
   return (
     <div className="d-flex overflow-auto gap-3 flex-wrap justify-content-start">
@@ -34,12 +33,11 @@ function CatalogGrid({
             precioOriginal={skin.price}
             descuento={skin.discount}
             imagen={skin.imageUrl}
-            onClick={() => onOpenPublication(skin.id)}
+            to={`/publicacion/${skin.id}`}
             addToCart={() => onCartClick(skin.id)}
             addingToCart={addingSkinId === skin.id}
             inCart={Boolean(getCartItemBySkinId(skin.id))}
             isOwnPublication={isOwnPublication(skin.id)}
-            onManage={() => onOpenPublication(skin.id)}
           />
         ))}
     </div>

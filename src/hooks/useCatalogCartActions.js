@@ -1,20 +1,25 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { agregarAlCarrito, eliminarItemCarrito } from "../Redux/carritoSlice"
 import { mostrarNotificacion } from "../Redux/notificacionesSlice"
-import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 import { getTradeUrlIssue } from "../utils/tradeProfile"
 
 export const useCatalogCartActions = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const currentUser = useSelector((state) => state.auth.currentUser)
-  const carrito = useSelector((state) => state.carrito.data)
+  const { data: carrito, updating, error: cartError } = useSelector((state) => state.carrito)
   const cartItems = carrito?.items ?? []
   const myPublications = useSelector((state) => state.publicaciones.items)
   const [error, setError] = useState("")
   const [addingSkinId, setAddingSkinId] = useState(null)
+
+  useEffect(() => {
+    if (!updating) {
+      setAddingSkinId(null)
+    }
+  }, [updating])
 
   const getCartItemBySkinId = (skinId) => {
     return cartItems.find((item) => item.skin?.id === skinId)
@@ -24,7 +29,7 @@ export const useCatalogCartActions = () => {
     return myPublications.some((publication) => publication.id === skinId)
   }
 
-  const handleCartClick = async (skinId) => {
+  const handleCartClick = (skinId) => {
     setError("")
 
     if (!currentUser) {
@@ -46,25 +51,11 @@ export const useCatalogCartActions = () => {
     const cartItem = getCartItemBySkinId(skinId)
     setAddingSkinId(skinId)
 
-    const action = cartItem
-      ? await dispatch(eliminarItemCarrito(cartItem.id))
-      : await dispatch(agregarAlCarrito(skinId))
-
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-    } else if (cartItem) {
-      dispatch(mostrarNotificacion("Item eliminado del carrito."))
-    } else {
-      dispatch(mostrarNotificacion("Item agregado al carrito con exito."))
-    }
-
-    setAddingSkinId(null)
+    dispatch(cartItem ? eliminarItemCarrito(cartItem.id) : agregarAlCarrito(skinId))
   }
 
   return {
-    error,
+    error: error || cartError,
     addingSkinId,
     getCartItemBySkinId,
     isOwnPublication,

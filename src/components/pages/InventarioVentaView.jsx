@@ -9,7 +9,6 @@ import {
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import { getSellingSetupIssues } from "../../utils/tradeProfile"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import "../../pages/InventarioVenta.css"
@@ -73,20 +72,9 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
   const selectedDiscountRate = Math.max(0, Math.min(Number(String(discount).replace(",", ".")) || 0, 100)) / 100
   const selectedFinalPriceUsd = selectedPriceUsd * (1 - selectedDiscountRate)
 
-  const handleSync = async () => {
+  const handleSync = () => {
     setError("")
-
-    const action = await dispatch(sincronizarInventario())
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Inventario actualizado correctamente.",
-    ))
+    dispatch(sincronizarInventario())
   }
 
   const openPublishModal = (item) => {
@@ -108,7 +96,7 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
     setDiscount("0")
   }
 
-  const handlePublish = async (event) => {
+  const handlePublish = (event) => {
     event.preventDefault()
     setError("")
 
@@ -128,24 +116,13 @@ function InventarioVenta({ goToLogin, goToPerfil }) {
       return
     }
 
-    const action = await dispatch(publicarInventarioItem({
+    dispatch(publicarInventarioItem({
       itemId: selectedItem.id,
       price: inputPriceToUsd(price),
       discount: discountNumber / 100,
       vendible: true,
       intercambiable: false,
     }))
-
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Publicación creada correctamente.",
-    ))
     setSelectedItem(null)
     setPrice("")
     setDiscount("0")

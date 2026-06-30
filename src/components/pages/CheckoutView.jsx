@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { FaCheck } from "react-icons/fa6"
 import {
   clearCheckoutResult,
   iniciarCheckout,
@@ -13,17 +12,9 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
 import CheckoutBalancePayment from "../checkout/CheckoutBalancePayment.jsx"
 import CheckoutMercadoPagoPayment from "../checkout/CheckoutMercadoPagoPayment.jsx"
+import CheckoutResult from "../checkout/CheckoutResult.jsx"
 import { getMercadoPagoCheckoutUrl } from "../../utils/mercadoPagoCheckout"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Checkout.css"
-
-const getConfirmedTradeStatus = (tradeStatus) => {
-  if (tradeStatus === "WAITING_UNLOCK") return "Esperando desbloqueo de Steam"
-  if (tradeStatus === "PREPARING_TRADE") return "Preparando intercambio"
-  if (tradeStatus === "BOT_SENT") return "Oferta de intercambio enviada"
-  if (tradeStatus === "COMPLETED") return "Intercambio completado"
-  return "Pago confirmado - Preparando entrega"
-}
 
 function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
   const { formatPrice } = useCurrencyFormatter()
@@ -42,7 +33,9 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
   } = useSelector((state) => state.checkout)
   const syncingRef = useRef(false)
   const notifiedOrderRef = useRef(null)
+  const paymentWindowRef = useRef(null)
   const [localError, setLocalError] = useState("")
+  const [mercadoPagoRequested, setMercadoPagoRequested] = useState(false)
 
   const openLogin = goToLogin ?? (() => navigate("/login"))
   const openCatalogo = goToCatalogo ?? (() => navigate("/catalogo"))
@@ -90,14 +83,30 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
     ))
   }, [completedResult, dispatch, order?.id])
 
-  const syncPaymentStatus = useCallback(async () => {
+  useEffect(() => {
+    if (!mercadoPagoRequested || !checkoutUrl) return
+    setMercadoPagoRequested(false)
+
+    const paymentWindow = paymentWindowRef.current
+    if (paymentWindow && !paymentWindow.closed) {
+      paymentWindow.location.href = checkoutUrl
+      paymentWindowRef.current = null
+      return
+    }
+
+    const newWindow = window.open(checkoutUrl, "_blank")
+    if (!newWindow) {
+      setLocalError("El navegador bloqueo la pestana de Mercado Pago. Habilita ventanas emergentes e intenta de nuevo.")
+      return
+    }
+    newWindow.opener = null
+  }, [checkoutUrl, mercadoPagoRequested])
+
+  const syncPaymentStatus = useCallback(() => {
     if (!order?.id || completedResult || syncingRef.current) return
     syncingRef.current = true
     setLocalError("")
-    const action = await dispatch(sincronizarPagoCheckout())
-    if (isRejectedAction(action)) {
-      setLocalError(actionErrorMessage(action, "No se pudo verificar el pago todavia."))
-    }
+    dispatch(sincronizarPagoCheckout())
     syncingRef.current = false
   }, [completedResult, dispatch, order?.id])
 
@@ -116,44 +125,31 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
     }
   }, [checkoutUrl, completedResult, order?.id, syncPaymentStatus])
 
-  const handleBalancePayment = async () => {
+  const handleBalancePayment = () => {
     if (completedResult || paymentBusy) return
     if (mercadoPagoSelected) {
       setLocalError("Ya iniciaste el pago con Mercado Pago para esta orden.")
       return
     }
     setLocalError("")
-    const action = await dispatch(pagarCheckoutConSaldo())
-    if (isRejectedAction(action)) {
-      setLocalError(actionErrorMessage(action))
-    }
+    dispatch(pagarCheckoutConSaldo())
   }
 
-  const handleMercadoPagoPayment = async () => {
+  const handleMercadoPagoPayment = () => {
     if (completedResult || paymentBusy) return
     setLocalError("")
     const paymentWindow = window.open("", "_blank")
-
-    const action = await dispatch(prepararMercadoPagoCheckout())
-    if (isRejectedAction(action)) {
-      paymentWindow?.close()
-      setLocalError(actionErrorMessage(action))
+    if (!paymentWindow) {
+      setLocalError("El navegador bloqueo la pestana de Mercado Pago. Habilita ventanas emergentes e intenta de nuevo.")
       return
     }
 
-    const paymentUrl = getMercadoPagoCheckoutUrl(action.payload)
-
-    if (paymentUrl) {
-      if (paymentWindow) {
-        paymentWindow.location.href = paymentUrl
-      } else {
-        window.location.assign(paymentUrl)
-      }
-      return
-    }
-
-    paymentWindow?.close()
-    setLocalError("Mercado Pago no devolvio una URL de Checkout Pro.")
+    paymentWindow.opener = null
+    paymentWindow.document.title = "Mercado Pago"
+    paymentWindow.document.body.innerHTML = "<p style=\"font-family:sans-serif\">Abriendo Mercado Pago...</p>"
+    paymentWindowRef.current = paymentWindow
+    setMercadoPagoRequested(true)
+    dispatch(prepararMercadoPagoCheckout())
   }
 
   if (!currentUser) {
@@ -169,57 +165,14 @@ function Checkout({ goToLogin, goToCatalogo, goToMisPublicaciones, cupon }) {
   }
 
   if (completedResult) {
-    const approved = completedResult.status === "approved"
-    const pending = completedResult.status === "in_process" || completedResult.status === "pending"
-    const confirmedOrder = completedResult.order ?? order
     return (
-      <main className="checkout-page">
-        <div className="checkout-box checkout-result-box">
-          {approved && (
-            <>
-              <div className="checkout-success-icon" aria-hidden="true"><FaCheck /></div>
-              <h1 className="checkout-ok">Compra exitosa</h1>
-              <p className="checkout-success-desc">
-                El pago fue aprobado y la orden qued&oacute; confirmada correctamente.
-              </p>
-              {confirmedOrder?.id && (
-                <div className="checkout-confirmed-order">
-                  <span>Orden #{confirmedOrder.id}</span>
-                  <strong>{getConfirmedTradeStatus(confirmedOrder.tradeStatus)}</strong>
-                </div>
-              )}
-              <button type="button" className="checkout-action-primary" onClick={openMisPublicaciones}>
-                Ver mis publicaciones
-              </button>
-              <button type="button" className="checkout-secondary" onClick={openCatalogo}>
-                Seguir comprando
-              </button>
-            </>
-          )}
-          {pending && (
-            <>
-              <h1 className="checkout-pending">Pago pendiente</h1>
-              <p>El pago quedó en revisión. Te avisaremos cuando se confirme.</p>
-              <button type="button" className="checkout-action-primary" onClick={openMisPublicaciones}>
-                Ver en Mis publicaciones
-              </button>
-              <button type="button" className="checkout-secondary" onClick={openCatalogo}>
-                Volver al catálogo
-              </button>
-            </>
-          )}
-          {!approved && !pending && (
-            <>
-              <h1 className="checkout-fail">Pago rechazado</h1>
-              <p>No se pudo procesar el pago ({completedResult.statusDetail || completedResult.status}).</p>
-              <button type="button" onClick={() => dispatch(clearCheckoutResult())}>Reintentar</button>
-              <button type="button" className="checkout-secondary" onClick={openCatalogo}>
-                Volver al catálogo
-              </button>
-            </>
-          )}
-        </div>
-      </main>
+      <CheckoutResult
+        completedResult={completedResult}
+        order={order}
+        onRetry={() => dispatch(clearCheckoutResult())}
+        onCatalogo={openCatalogo}
+        onMisPublicaciones={openMisPublicaciones}
+      />
     )
   }
 

@@ -3,11 +3,15 @@ import { FaArrowLeft, FaBan, FaCreditCard, FaPen, FaShoppingCart } from "react-i
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate, useParams } from "react-router-dom"
 import { agregarAlCarrito, eliminarItemCarrito } from "../../Redux/carritoSlice"
+import {
+  clearCurrentItem,
+  selectCurrentCatalogItem,
+  setCurrentItem,
+} from "../../Redux/catalogoSlice"
 import { prepararCheckoutInstantaneo, resetCheckout } from "../../Redux/checkoutSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { despublicarPublicacion, editarPublicacion } from "../../Redux/publicacionesSlice"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlIssue } from "../../utils/tradeProfile"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
@@ -23,14 +27,19 @@ function Publicacion() {
   const cartItems = carrito?.items ?? []
   const myPublications = useSelector((state) => state.publicaciones.items)
   const loading = useSelector((state) => state.catalogo.loading)
-  const skin = useSelector((state) =>
-    state.catalogo.items.find((item) => String(item.id) === String(skinId)),
-  )
+  const skin = useSelector(selectCurrentCatalogItem)
   const [addingCart, setAddingCart] = useState(false)
   const [savingOwner, setSavingOwner] = useState(false)
   const [deactivating, setDeactivating] = useState(false)
   const [ownerPrice, setOwnerPrice] = useState("")
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    dispatch(setCurrentItem(skinId))
+    return () => {
+      dispatch(clearCurrentItem())
+    }
+  }, [dispatch, skinId])
 
   useEffect(() => {
     if (skin?.price != null) {
@@ -43,7 +52,7 @@ function Publicacion() {
   const ownPublication = myPublications.find((publication) => publication.id === skin?.id)
   const isOwnPublication = Boolean(ownPublication)
 
-  const handleCartAction = async () => {
+  const handleCartAction = () => {
     setError("")
 
     if (!currentUser) {
@@ -64,26 +73,12 @@ function Publicacion() {
 
     setAddingCart(true)
 
-    const action = isInCart
-      ? await dispatch(eliminarItemCarrito(cartItem.id))
-      : await dispatch(agregarAlCarrito(skin.id))
-
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setAddingCart(false)
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      isInCart ? "Ítem eliminado del carrito." : "Ítem agregado al carrito con éxito.",
-    ))
+    dispatch(isInCart ? eliminarItemCarrito(cartItem.id) : agregarAlCarrito(skin.id))
     dispatch(resetCheckout())
     setAddingCart(false)
   }
 
-  const handleOwnerEdit = async (event) => {
+  const handleOwnerEdit = (event) => {
     event.preventDefault()
     setError("")
 
@@ -94,45 +89,24 @@ function Publicacion() {
     }
 
     setSavingOwner(true)
-    const action = await dispatch(editarPublicacion({
+    dispatch(editarPublicacion({
       skinId: skin.id,
       price: Number(ownerPrice),
       discount: skin.discount ?? 0,
       vendible: skin.vendible !== false,
       intercambiable: skin.vendible !== false ? false : skin.intercambiable === true,
     }))
-
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setSavingOwner(false)
-      return
-    }
-
-    dispatch(mostrarNotificacion("Precio actualizado correctamente."))
     setSavingOwner(false)
   }
 
-  const handleDeactivate = async () => {
+  const handleDeactivate = () => {
     setError("")
 
     const confirmed = window.confirm("¿Seguro que querés dar de baja esta publicación?")
     if (!confirmed) return
 
     setDeactivating(true)
-    const action = await dispatch(despublicarPublicacion(skin.id))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setDeactivating(false)
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Publicación dada de baja.",
-    ))
+    dispatch(despublicarPublicacion(skin.id))
     setDeactivating(false)
   }
 

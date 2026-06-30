@@ -1,8 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { loginUser, resendVerificationEmail } from "../../Redux/authSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import PasswordInput from "../PasswordInput.jsx"
 import SteamLoginButton from "../SteamLoginButton.jsx"
 import "../../pages/Login.css"
@@ -10,45 +9,35 @@ import "../../pages/Login.css"
 function Login({ goToCatalogo, goToRegister, goToForgot }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const loading = useSelector((state) => state.auth.loading)
+  const { currentUser, loading, error: authError, message } = useSelector((state) => state.auth)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-  const [message, setMessage] = useState("")
   const openCatalogo = goToCatalogo ?? (() => navigate("/catalogo"))
   const openRegister = goToRegister ?? (() => navigate("/register"))
   const openForgot = goToForgot ?? (() => navigate("/olvidar-contrasena"))
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
-
-    const action = await dispatch(loginUser({ email, password }))
-    if (isRejectedAction(action)) {
-      setError(actionErrorMessage(action))
-      return
-    }
-
-    openCatalogo()
+    dispatch(loginUser({ email, password }))
   }
 
-  const handleResendVerification = async () => {
+  const handleResendVerification = () => {
     setError("")
-    setMessage("")
     if (!email.trim()) {
       setError("Ingresá tu email para reenviar la verificación.")
       return
     }
 
-    const action = await dispatch(resendVerificationEmail(email.trim()))
-    if (isRejectedAction(action)) {
-      setError(actionErrorMessage(action))
-      return
-    }
-
-    setMessage(action.payload || "Si tu cuenta está pendiente, reenviamos el link.")
+    dispatch(resendVerificationEmail(email.trim()))
   }
+
+  useEffect(() => {
+    if (currentUser) {
+      openCatalogo()
+    }
+  }, [currentUser, openCatalogo])
 
   return (
     <main className="login-page">
@@ -79,7 +68,7 @@ function Login({ goToCatalogo, goToRegister, goToForgot }) {
           required
         />
 
-        {error && <p className="login-error">{error}</p>}
+        {(error || authError) && <p className="login-error">{error || authError}</p>}
         {message && <p className="login-success">{message}</p>}
 
         <button type="submit" disabled={loading}>

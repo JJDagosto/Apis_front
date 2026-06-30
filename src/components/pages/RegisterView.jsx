@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { registerUser } from "../../Redux/authSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getRegisterPasswordError, isValidEmail } from "../../utils/validations.jsx"
 import PasswordInput from "../PasswordInput.jsx"
 import "../../pages/Register.css"
@@ -11,6 +10,7 @@ function Register({ goToLogin }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const openLogin = goToLogin ?? (() => navigate("/login"))
+  const { loading, error: authError, message } = useSelector((state) => state.auth)
   const [form, setForm] = useState({
     username: "",
     firstName: "",
@@ -19,9 +19,7 @@ function Register({ goToLogin }) {
     password: "",
     passwordRepeat: "",
   })
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [message, setMessage] = useState("")
 
   const updateField = (field, value) => {
     setForm((currentForm) => ({
@@ -30,10 +28,9 @@ function Register({ goToLogin }) {
     }))
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
 
     if (!isValidEmail(form.email)) {
       setError("Ingresá un email válido.")
@@ -46,9 +43,7 @@ function Register({ goToLogin }) {
       return
     }
 
-    setLoading(true)
-
-    const action = await dispatch(registerUser({
+    dispatch(registerUser({
         username: form.username.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -56,15 +51,6 @@ function Register({ goToLogin }) {
         password: form.password,
         passwordRepeat: form.passwordRepeat,
     }))
-
-    if (isRejectedAction(action)) {
-      setError(actionErrorMessage(action))
-      setLoading(false)
-      return
-    }
-
-    setMessage(action.payload || "Cuenta creada. Verificá tu email antes de iniciar sesión.")
-    setLoading(false)
   }
 
   return (
@@ -134,7 +120,7 @@ function Register({ goToLogin }) {
           />
         </div>
 
-        {error && <p className="register-error">{error}</p>}
+        {(error || authError) && <p className="register-error">{error || authError}</p>}
         {message && <p className="register-success">{message}</p>}
 
         <button type="submit" disabled={loading}>

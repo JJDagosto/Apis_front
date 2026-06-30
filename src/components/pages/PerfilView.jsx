@@ -2,8 +2,6 @@ import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { updateCurrentUser } from "../../Redux/authSlice"
-import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getTradeUrlError } from "../../utils/validations.jsx"
 import SteamLoginButton from "../SteamLoginButton.jsx"
 import "../../pages/Perfil.css"
@@ -22,9 +20,8 @@ function Perfil({ goToLogin }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const openLogin = goToLogin ?? (() => navigate("/login"))
-  const currentUser = useSelector((state) => state.auth.currentUser)
+  const { currentUser, loading, error: authError } = useSelector((state) => state.auth)
   const [form, setForm] = useState(emptyProfile)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -60,7 +57,7 @@ function Perfil({ goToLogin }) {
     }))
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     setError("")
 
@@ -69,8 +66,6 @@ function Perfil({ goToLogin }) {
       setError(tradeUrlError)
       return
     }
-
-    setLoading(true)
 
     const payload = {
       username: currentUser.steamId64
@@ -87,18 +82,8 @@ function Perfil({ goToLogin }) {
       payload.password = form.password
     }
 
-    const action = await dispatch(updateCurrentUser(payload))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setLoading(false)
-      return
-    }
-
+    dispatch(updateCurrentUser(payload))
     setForm((currentForm) => ({ ...currentForm, password: "" }))
-    dispatch(mostrarNotificacion("Perfil actualizado correctamente."))
-    setLoading(false)
   }
 
   return (
@@ -253,7 +238,7 @@ function Perfil({ goToLogin }) {
             </div>
           </div>
 
-          {error && <p className="profile-error">{error}</p>}
+          {(error || authError) && <p className="profile-error">{error || authError}</p>}
 
           <button type="submit" disabled={loading}>
             {loading ? "Guardando..." : "Guardar cambios"}

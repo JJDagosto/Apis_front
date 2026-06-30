@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { sincronizarInventario } from "../../Redux/inventarioSlice"
@@ -9,7 +9,6 @@ import {
   toggleOfferedInventoryItem,
   toggleRequestedSkin,
 } from "../../Redux/intercambioSlice"
-import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import { selectExchangeCatalogItems } from "../../Redux/catalogoSlice"
 import CatalogFilters from "../CatalogFilters.jsx"
 import CatalogModeTabs from "../catalogo/CatalogModeTabs.jsx"
@@ -31,7 +30,6 @@ function IntercambiarView() {
     items: inventoryItems,
     status: inventoryStatus,
     syncing,
-    syncMessage,
     error: inventoryError,
   } = useSelector((state) => state.inventario)
   const {
@@ -41,12 +39,8 @@ function IntercambiarView() {
     quoteStatus,
     quoteError,
     submitting,
-    submitError,
-    operation,
   } = useSelector((state) => state.intercambio)
   const inventoryLoading = inventoryStatus === "loading"
-  const prevSyncing = useRef(false)
-  const prevSubmitting = useRef(false)
   const [balanceModalOpen, setBalanceModalOpen] = useState(false)
   const canSubmit =
     Boolean(currentUser) &&
@@ -76,29 +70,6 @@ function IntercambiarView() {
     submitting,
     currentUser?.saldo,
   ])
-
-  useEffect(() => {
-    if (prevSyncing.current && !syncing) {
-      dispatch(mostrarNotificacion(
-        inventoryError || syncMessage || "Inventario actualizado correctamente.",
-        inventoryError ? "error" : "success",
-      ))
-    }
-    prevSyncing.current = syncing
-  }, [dispatch, inventoryError, syncMessage, syncing])
-
-  useEffect(() => {
-    if (prevSubmitting.current && !submitting) {
-      if (submitError) {
-        dispatch(mostrarNotificacion(submitError, "error"))
-      } else if (operation?.id) {
-        dispatch(mostrarNotificacion(
-          `Intercambio #${operation.id} creado correctamente. Revisa su estado en Mis publicaciones.`,
-        ))
-      }
-    }
-    prevSubmitting.current = submitting
-  }, [dispatch, operation?.id, submitError, submitting])
 
   const handleSyncInventory = () => {
     dispatch(sincronizarInventario())

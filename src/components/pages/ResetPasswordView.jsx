@@ -1,8 +1,7 @@
 import { useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { resetUserPassword } from "../../Redux/authSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getResetPasswordError } from "../../utils/validations.jsx"
 import PasswordInput from "../PasswordInput.jsx"
 import "../../pages/Login.css"
@@ -11,11 +10,10 @@ function ResetPassword({ token, goToLogin }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const openLogin = goToLogin ?? (() => navigate("/login"))
+  const { loading, error: authError, message } = useSelector((state) => state.auth)
   const [password, setPassword] = useState("")
   const [passwordRepeat, setPasswordRepeat] = useState("")
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [done, setDone] = useState(false)
 
   if (!token) {
     return (
@@ -33,7 +31,7 @@ function ResetPassword({ token, goToLogin }) {
     )
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     setError("")
 
@@ -43,19 +41,10 @@ function ResetPassword({ token, goToLogin }) {
       return
     }
 
-    setLoading(true)
-    const action = await dispatch(resetUserPassword({ token, password, passwordRepeat }))
-    if (isRejectedAction(action)) {
-      setError(actionErrorMessage(action))
-      setLoading(false)
-      return
-    }
-
-    setDone(true)
-    setLoading(false)
+    dispatch(resetUserPassword({ token, password, passwordRepeat }))
   }
 
-  if (done) {
+  if (message && !authError) {
     return (
       <main className="login-page">
         <div className="login-form">
@@ -92,7 +81,7 @@ function ResetPassword({ token, goToLogin }) {
           required
         />
 
-        {error && <p className="login-error">{error}</p>}
+        {(error || authError) && <p className="login-error">{error || authError}</p>}
 
         <button type="submit" disabled={loading}>
           {loading ? "Guardando..." : "Cambiar contraseña"}

@@ -1,9 +1,7 @@
-import { useState } from "react"
+import { useEffect } from "react"
 import { FaSteam } from "react-icons/fa"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { fetchSteamLoginUrl } from "../Redux/authSlice"
-import { mostrarNotificacion } from "../Redux/notificacionesSlice"
-import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 
 function SteamLoginButton({
   className = "",
@@ -11,24 +9,17 @@ function SteamLoginButton({
   disabled = false,
 }) {
   const dispatch = useDispatch()
-  const [starting, setStarting] = useState(false)
+  const { loading, steamLoginUrl } = useSelector((state) => state.auth)
 
-  const handleSteamLogin = async () => {
-    setStarting(true)
-
-    const redirectUrl = `${window.location.origin}/login/steam/callback`
-    const action = await dispatch(fetchSteamLoginUrl({ redirectUrl }))
-
-    if (isRejectedAction(action)) {
-      setStarting(false)
-      dispatch(mostrarNotificacion(
-        actionErrorMessage(action, "No se pudo iniciar sesión con Steam."),
-        "error",
-      ))
-      return
+  useEffect(() => {
+    if (steamLoginUrl) {
+      window.location.assign(steamLoginUrl)
     }
+  }, [steamLoginUrl])
 
-    window.location.assign(action.payload)
+  const handleSteamLogin = () => {
+    const redirectUrl = `${window.location.origin}/login/steam/callback`
+    dispatch(fetchSteamLoginUrl({ redirectUrl }))
   }
 
   return (
@@ -36,10 +27,10 @@ function SteamLoginButton({
       className={className}
       type="button"
       onClick={handleSteamLogin}
-      disabled={disabled || starting}
+      disabled={disabled || loading}
     >
       <FaSteam />
-      {starting ? "Conectando con Steam..." : label}
+      {loading ? "Conectando con Steam..." : label}
     </button>
   )
 }

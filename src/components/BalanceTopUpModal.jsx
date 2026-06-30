@@ -6,9 +6,7 @@ import {
   prepararRecargaSaldo,
   sincronizarRecargaSaldo,
 } from "../Redux/authSlice"
-import { mostrarNotificacion } from "../Redux/notificacionesSlice"
 import { getMercadoPagoCheckoutUrl } from "../utils/mercadoPagoCheckout"
-import { actionErrorMessage, isRejectedAction } from "../utils/reduxResult"
 import "./BalanceTopUpModal.css"
 
 const QUICK_AMOUNTS = [1500, 3000, 7000, 10000, 20000, 50000]
@@ -29,6 +27,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     balanceLoading,
     balanceSyncing,
     balanceCheckout,
+    balancePayment,
     balanceError,
   } = useSelector((state) => state.auth)
   const rate = Number(currentUser?.usdToArs ?? 1451.02)
@@ -42,7 +41,9 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
   const [inputValue, setInputValue] = useState(defaultAmountArs.toFixed(2))
   const [localError, setLocalError] = useState("")
   const [statusMessage, setStatusMessage] = useState("")
+  const [checkoutRequested, setCheckoutRequested] = useState(false)
   const syncingRef = useRef(false)
+  const paymentWindowRef = useRef(null)
 
   const amountArs = useMemo(() => {
     const value = Number(inputValue)
@@ -70,34 +71,41 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     setStatusMessage("")
   }
 
-  const syncPaymentStatus = useCallback(async () => {
+  useEffect(() => {
+    if (!checkoutRequested || !checkoutUrl) return
+    setCheckoutRequested(false)
+
+    const paymentWindow = paymentWindowRef.current
+    if (paymentWindow && !paymentWindow.closed) {
+      paymentWindow.location.href = checkoutUrl
+      paymentWindowRef.current = null
+    } else {
+      const newWindow = window.open(checkoutUrl, "_blank")
+      if (!newWindow) {
+        setLocalError("El navegador bloqueo la pestana de Mercado Pago. Habilita ventanas emergentes e intenta de nuevo.")
+        return
+      }
+      newWindow.opener = null
+    }
+
+    setStatusMessage("Completa el pago en Mercado Pago y luego volve a esta pestana.")
+  }, [checkoutRequested, checkoutUrl])
+
+  useEffect(() => {
+    if (!isApproved(balancePayment)) return
+    dispatch(clearBalanceCheckout())
+    onClose()
+  }, [balancePayment, dispatch, onClose])
+
+  const syncPaymentStatus = useCallback(() => {
     if (!balanceCheckout?.order?.id || syncingRef.current) return
 
     syncingRef.current = true
     setLocalError("")
     setStatusMessage("")
-    const action = await dispatch(sincronizarRecargaSaldo())
-    if (isRejectedAction(action)) {
-      setLocalError(actionErrorMessage(action, "No se pudo verificar la recarga todavia."))
-      syncingRef.current = false
-      return
-    }
-
-    const result = action.payload
-    if (isApproved(result.payment)) {
-      const creditedUsd = Number(result.payment?.order?.priceDifference ?? amountUsd)
-      dispatch(mostrarNotificacion(
-        `Se acreditaron $${creditedUsd.toFixed(2)} USD a tu saldo.`,
-        "success",
-      ))
-      dispatch(clearBalanceCheckout())
-      syncingRef.current = false
-      onClose()
-      return
-    }
-    setStatusMessage("El pago todavia esta pendiente en Mercado Pago.")
+    dispatch(sincronizarRecargaSaldo())
     syncingRef.current = false
-  }, [amountUsd, balanceCheckout?.order?.id, dispatch, onClose])
+  }, [balanceCheckout?.order?.id, dispatch])
 
   useEffect(() => {
     if (!checkoutUrl || !balanceCheckout?.order?.id) return
@@ -114,7 +122,7 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     }
   }, [balanceCheckout?.order?.id, checkoutUrl, syncPaymentStatus])
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     setLocalError("")
     setStatusMessage("")
 
@@ -124,34 +132,19 @@ function BalanceTopUpModal({ currentUser, initialAmountUsd = 0, onClose }) {
     }
 
     const paymentWindow = window.open("", "_blank")
-    const action = await dispatch(prepararRecargaSaldo({
+    if (!paymentWindow) {
+      setLocalError("El navegador bloqueo la pestana de Mercado Pago. Habilita ventanas emergentes e intenta de nuevo.")
+      return
+    }
+
+    paymentWindow.opener = null
+    paymentWindow.document.title = "Mercado Pago"
+    paymentWindow.document.body.innerHTML = "<p style=\"font-family:sans-serif\">Abriendo Mercado Pago...</p>"
+    paymentWindowRef.current = paymentWindow
+    setCheckoutRequested(true)
+    dispatch(prepararRecargaSaldo({
       amountArs: Number(amountArs.toFixed(2)),
     }))
-
-    if (isRejectedAction(action)) {
-      paymentWindow?.close()
-      const message = actionErrorMessage(action, "No se pudo iniciar la recarga.")
-      setLocalError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    const paymentUrl = getMercadoPagoCheckoutUrl(action.payload)
-
-    if (!paymentUrl) {
-      paymentWindow?.close()
-      const message = "Mercado Pago no devolvio una URL de checkout."
-      setLocalError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      return
-    }
-
-    if (paymentWindow) {
-      paymentWindow.location.href = paymentUrl
-    } else {
-      window.location.assign(paymentUrl)
-    }
-    setStatusMessage("Completa el pago en Mercado Pago y luego volve a esta pestana.")
   }
 
   return (

@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout, setCurrentUserBalance } from "./authSlice"
+import { mostrarNotificacion } from "./notificacionesSlice"
 
 const getToken = (getState) => getState().auth.token
 
@@ -159,7 +160,7 @@ export const iniciarCheckout = createAsyncThunk(
 
 export const sincronizarPagoCheckout = createAsyncThunk(
   "checkout/sincronizarPagoCheckout",
-  async (_, { getState }) => {
+  async (_, { dispatch, getState, rejectWithValue }) => {
     const state = getState()
     const paidOrder = getApprovedOrder(state)
     if (paidOrder) {
@@ -173,33 +174,44 @@ export const sincronizarPagoCheckout = createAsyncThunk(
 
     const orderId = state.checkout.data?.order?.id
     if (!orderId) {
-      throw new Error("No hay una orden para verificar.")
+      const message = "No hay una orden para verificar."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
 
-    const token = getToken(getState)
-    const response = await apiRequest(
-      `/payments/bricks/orders/${orderId}/sync`,
-      { method: "POST" },
-      token,
-    )
-
-    let payment = response.data
-    if (!approvedPayment(payment)) {
-      const pendingResponse = await apiRequest(
-        "/payments/bricks/orders/sync-pending",
+    try {
+      const token = getToken(getState)
+      const response = await apiRequest(
+        `/payments/bricks/orders/${orderId}/sync`,
         { method: "POST" },
         token,
       )
-      payment = pendingResponse.data
-    }
 
-    return {
-      payment,
-      cart: approvedPayment(payment) && !state.checkout.instantItem
-        ? await clearApprovedCart(token)
-        : null,
-      purchasedPublications: buildPurchasedPublications(state, payment),
+      let payment = response.data
+      if (!approvedPayment(payment)) {
+        const pendingResponse = await apiRequest(
+          "/payments/bricks/orders/sync-pending",
+          { method: "POST" },
+          token,
+        )
+        payment = pendingResponse.data
+      }
+
+      return {
+        payment,
+        cart: approvedPayment(payment) && !state.checkout.instantItem
+          ? await clearApprovedCart(token)
+          : null,
+        purchasedPublications: buildPurchasedPublications(state, payment),
+      }
+    } catch (error) {
+      const message = error?.message || "No se pudo verificar el pago todavia."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
+  },
+  {
+    condition: (_, { getState }) => !paymentIsProcessing(getState()),
   },
 )
 
@@ -251,27 +263,37 @@ export const procesarPagoPrueba = createAsyncThunk(
 
 export const prepararMercadoPagoCheckout = createAsyncThunk(
   "checkout/prepararMercadoPago",
-  async (_, { getState }) => {
+  async (_, { dispatch, getState, rejectWithValue }) => {
     const state = getState()
     if (getApprovedOrder(state)) {
-      throw new Error("Esta orden ya fue pagada.")
+      const message = "Esta orden ya fue pagada."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
 
     const orderId = state.checkout.data?.order?.id
     if (!orderId) {
-      throw new Error("No hay una orden para pagar.")
+      const message = "No hay una orden para pagar."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
 
     if (state.checkout.data?.preferenceId && state.checkout.data?.publicKey) {
       return state.checkout.data
     }
 
-    const response = await apiRequest(
-      `/payments/bricks/preferences/orders/${orderId}`,
-      { method: "POST" },
-      getToken(getState),
-    )
-    return response.data
+    try {
+      const response = await apiRequest(
+        `/payments/bricks/preferences/orders/${orderId}`,
+        { method: "POST" },
+        getToken(getState),
+      )
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo preparar Mercado Pago."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
   {
     condition: (_, { getState }) => {
@@ -283,7 +305,7 @@ export const prepararMercadoPagoCheckout = createAsyncThunk(
 
 export const pagarCheckoutConSaldo = createAsyncThunk(
   "checkout/pagarConSaldo",
-  async (_, { dispatch, getState }) => {
+  async (_, { dispatch, getState, rejectWithValue }) => {
     const state = getState()
     const paidOrder = getApprovedOrder(state)
     if (paidOrder) {
@@ -298,28 +320,36 @@ export const pagarCheckoutConSaldo = createAsyncThunk(
 
     const orderId = state.checkout.data?.order?.id
     if (!orderId) {
-      throw new Error("No hay una orden para pagar.")
+      const message = "No hay una orden para pagar."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
 
-    const token = getToken(getState)
-    const response = await apiRequest(
-      `/payments/bricks/orders/${orderId}/process-balance`,
-      { method: "POST" },
-      token,
-    )
-    const currentBalance = Number(state.auth.currentUser?.saldo ?? 0)
-    const orderTotal = Number(state.checkout.data?.order?.totalFinal ?? 0)
-    if (approvedPayment(response.data)) {
-      const updatedBalance = Math.max(currentBalance - orderTotal, 0)
-      dispatch(setCurrentUserBalance(updatedBalance))
-    }
+    try {
+      const token = getToken(getState)
+      const response = await apiRequest(
+        `/payments/bricks/orders/${orderId}/process-balance`,
+        { method: "POST" },
+        token,
+      )
+      const currentBalance = Number(state.auth.currentUser?.saldo ?? 0)
+      const orderTotal = Number(state.checkout.data?.order?.totalFinal ?? 0)
+      if (approvedPayment(response.data)) {
+        const updatedBalance = Math.max(currentBalance - orderTotal, 0)
+        dispatch(setCurrentUserBalance(updatedBalance))
+      }
 
-    return {
-      payment: response.data,
-      cart: approvedPayment(response.data) && !state.checkout.instantItem
-        ? await clearApprovedCart(token)
-        : null,
-      purchasedPublications: buildPurchasedPublications(state, response.data),
+      return {
+        payment: response.data,
+        cart: approvedPayment(response.data) && !state.checkout.instantItem
+          ? await clearApprovedCart(token)
+          : null,
+        purchasedPublications: buildPurchasedPublications(state, response.data),
+      }
+    } catch (error) {
+      const message = error?.message || "No se pudo pagar con saldo."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
   },
   {
@@ -450,7 +480,7 @@ const checkoutSlice = createSlice({
       })
       .addCase(sincronizarPagoCheckout.rejected, (state, action) => {
         state.syncing = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(procesarPagoPrueba.pending, (state) => {
         state.testProcessing = true
@@ -491,7 +521,7 @@ const checkoutSlice = createSlice({
       })
       .addCase(prepararMercadoPagoCheckout.rejected, (state, action) => {
         state.mercadoPagoProcessing = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(pagarCheckoutConSaldo.pending, (state) => {
         state.balanceProcessing = true
@@ -512,7 +542,7 @@ const checkoutSlice = createSlice({
       })
       .addCase(pagarCheckoutConSaldo.rejected, (state, action) => {
         state.balanceProcessing = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(logout, (state) => {
         state.instantItem = null

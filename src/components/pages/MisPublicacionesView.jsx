@@ -20,7 +20,6 @@ import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
 import ExchangeOperationsSection from "../publicaciones/ExchangeOperationsSection.jsx"
 import { limpiarNombreSkin } from "../../utils/skinFormat"
 import useCurrencyFormatter from "../../hooks/useCurrencyFormatter"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import { getPositivePriceError } from "../../utils/validations.jsx"
 import "../../pages/MisPublicaciones.css"
 
@@ -122,7 +121,7 @@ function MisPublicaciones({ goToLogin }) {
     intercambios.length +
     historial.length
 
-  const handleDespublicar = async (skin) => {
+  const handleDespublicar = (skin) => {
     setError("")
     setActionId(skin.id)
     if (skin.localOptimistic) {
@@ -132,28 +131,17 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
-    const action = await dispatch(despublicarPublicacion(skin.id))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setActionId(null)
-      return
-    }
-
+    dispatch(despublicarPublicacion(skin.id))
     dispatch(marcarInventarioItemDisponible({
       itemId: skin.inventarioItem?.id,
       steamAssetId: skin.steamAssetId,
       catalogoId: skin.catalogo?.id,
       name: skin.name,
     }))
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Publicación retirada. El bot devolverá la skin al inventario.",
-    ))
     setActionId(null)
   }
 
-  const handlePausar = async (skin) => {
+  const handlePausar = (skin) => {
     setError("")
     setActionId(skin.id)
     if (skin.localOptimistic) {
@@ -163,22 +151,11 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
-    const action = await dispatch(pausarPublicacion(skin.id))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setActionId(null)
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Publicacion pausada. Podés reactivarla desde Mis publicaciones.",
-    ))
+    dispatch(pausarPublicacion(skin.id))
     setActionId(null)
   }
 
-  const handleActivar = async (skin) => {
+  const handleActivar = (skin) => {
     setError("")
     setActionId(skin.id)
     if (skin.localOptimistic) {
@@ -188,18 +165,7 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
-    const action = await dispatch(activarPublicacion(skin.id))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setActionId(null)
-      return
-    }
-
-    dispatch(mostrarNotificacion(
-      action.payload?.message || "Publicación reactivada.",
-    ))
+    dispatch(activarPublicacion(skin.id))
     setActionId(null)
   }
 
@@ -216,7 +182,7 @@ function MisPublicaciones({ goToLogin }) {
     setEditDiscount("0")
   }
 
-  const handleEditSubmit = async (event) => {
+  const handleEditSubmit = (event) => {
     event.preventDefault()
     setError("")
 
@@ -252,23 +218,13 @@ function MisPublicaciones({ goToLogin }) {
       return
     }
 
-    const action = await dispatch(editarPublicacion({
+    dispatch(editarPublicacion({
       skinId: editItem.id,
       price: priceNumber,
       discount: discountNumber / 100,
       vendible: true,
       intercambiable: false,
     }))
-
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setSaving(false)
-      return
-    }
-
-    dispatch(mostrarNotificacion("Publicación actualizada correctamente."))
     setEditItem(null)
     setSaving(false)
   }
@@ -348,7 +304,7 @@ function MisPublicaciones({ goToLogin }) {
     navigate("/checkout")
   }
 
-  const handleCancelarPagoPendiente = async (orden) => {
+  const handleCancelarPagoPendiente = (orden) => {
     setError("")
 
     const confirmed = window.confirm(
@@ -357,17 +313,8 @@ function MisPublicaciones({ goToLogin }) {
     if (!confirmed) return
 
     setPendingActionId(orden.id)
-    const action = await dispatch(cancelarPagoPendiente(orden.id))
-    if (isRejectedAction(action)) {
-      const message = actionErrorMessage(action)
-      setError(message)
-      dispatch(mostrarNotificacion(message, "error"))
-      setPendingActionId(null)
-      return
-    }
-
+    dispatch(cancelarPagoPendiente(orden.id))
     dispatch(resetCheckout())
-    dispatch(mostrarNotificacion("Pago pendiente cancelado. La publicación volvió al catálogo."))
     setPendingActionId(null)
   }
 

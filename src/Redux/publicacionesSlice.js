@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout } from "./authSlice"
+import { mostrarNotificacion } from "./notificacionesSlice"
 import { publicarInventarioItem } from "./inventarioSlice"
 import {
   iniciarCheckout,
@@ -85,73 +86,108 @@ export const fetchSalesNotifications = createAsyncThunk(
 
 export const editarPublicacion = createAsyncThunk(
   "publicaciones/editarPublicacion",
-  async ({ skinId, price, discount = 0, vendible = true, intercambiable = false }, { getState }) => {
-    const response = await apiRequest(
-      `/skins/${skinId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify({
-          price,
-          discount,
-          stock: 1,
-          vendible,
-          intercambiable,
-        }),
-      },
-      getToken(getState),
-    )
-    return response.data
+  async ({ skinId, price, discount = 0, vendible = true, intercambiable = false }, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        `/skins/${skinId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            price,
+            discount,
+            stock: 1,
+            vendible,
+            intercambiable,
+          }),
+        },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion("Publicacion actualizada correctamente."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo actualizar la publicacion."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const despublicarPublicacion = createAsyncThunk(
   "publicaciones/despublicarPublicacion",
-  async (skinId, { getState }) => {
-    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
-    const response = await apiRequest(
-      `/skins/${skinId}/inactivar`,
-      { method: "PUT" },
-      getToken(getState),
-    )
-    return { skinId, skin, message: response.message }
+  async (skinId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const skin = getState().publicaciones.items.find((item) => item.id === skinId)
+      const response = await apiRequest(
+        `/skins/${skinId}/inactivar`,
+        { method: "PUT" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion(response.message || "Publicacion retirada. El bot devolvera la skin al inventario."))
+      return { skinId, skin, message: response.message }
+    } catch (error) {
+      const message = error?.message || "No se pudo retirar la publicacion."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const pausarPublicacion = createAsyncThunk(
   "publicaciones/pausarPublicacion",
-  async (skinId, { getState }) => {
-    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
-    const response = await apiRequest(
-      `/skins/${skinId}/pausar`,
-      { method: "PUT" },
-      getToken(getState),
-    )
-    return { skinId, skin, message: response.message }
+  async (skinId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const skin = getState().publicaciones.items.find((item) => item.id === skinId)
+      const response = await apiRequest(
+        `/skins/${skinId}/pausar`,
+        { method: "PUT" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion(response.message || "Publicacion pausada. Podes reactivarla desde Mis publicaciones."))
+      return { skinId, skin, message: response.message }
+    } catch (error) {
+      const message = error?.message || "No se pudo pausar la publicacion."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const activarPublicacion = createAsyncThunk(
   "publicaciones/activarPublicacion",
-  async (skinId, { getState }) => {
-    const skin = getState().publicaciones.items.find((item) => item.id === skinId)
-    const response = await apiRequest(
-      `/skins/${skinId}/activar`,
-      { method: "PUT" },
-      getToken(getState),
-    )
-    return { skinId, skin, message: response.message }
+  async (skinId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const skin = getState().publicaciones.items.find((item) => item.id === skinId)
+      const response = await apiRequest(
+        `/skins/${skinId}/activar`,
+        { method: "PUT" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion(response.message || "Publicacion reactivada."))
+      return { skinId, skin, message: response.message }
+    } catch (error) {
+      const message = error?.message || "No se pudo activar la publicacion."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 
 export const cancelarPagoPendiente = createAsyncThunk(
   "publicaciones/cancelarPagoPendiente",
-  async (orderId, { getState }) => {
-    const response = await apiRequest(
-      `/order/${orderId}/cancel-pending`,
-      { method: "POST" },
-      getToken(getState),
-    )
-    return response.data
+  async (orderId, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        `/order/${orderId}/cancel-pending`,
+        { method: "POST" },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion("Pago pendiente cancelado. La publicacion volvio al catalogo."))
+      return response.data
+    } catch (error) {
+      const message = error?.message || "No se pudo cancelar el pago pendiente."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
+    }
   },
 )
 

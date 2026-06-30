@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { loginWithSteamToken } from "../../Redux/authSlice"
 import { mostrarNotificacion } from "../../Redux/notificacionesSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Login.css"
 
 const processedSteamCallbacks = new Set()
@@ -12,7 +11,20 @@ function SteamCallbackView() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { currentUser, error } = useSelector((state) => state.auth)
   const [message, setMessage] = useState("Conectando con Steam...")
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate(currentUser.tradeUrl ? "/catalogo" : "/perfil", { replace: true })
+    }
+  }, [currentUser, navigate])
+
+  useEffect(() => {
+    if (error) {
+      setMessage(error)
+    }
+  }, [error])
 
   useEffect(() => {
     const token = searchParams.get("token")
@@ -35,23 +47,8 @@ function SteamCallbackView() {
       return
     }
 
-    const finishSteamLogin = async () => {
-      const action = await dispatch(loginWithSteamToken(token))
-
-      if (isRejectedAction(action)) {
-        processedSteamCallbacks.delete(callbackKey)
-        const message = actionErrorMessage(action)
-        setMessage(message)
-        dispatch(mostrarNotificacion(message, "error"))
-        return
-      }
-
-      dispatch(mostrarNotificacion("Sesión iniciada con Steam."))
-      navigate(action.payload?.user?.tradeUrl ? "/catalogo" : "/perfil", { replace: true })
-    }
-
-    finishSteamLogin()
-  }, [dispatch, navigate, searchParams])
+    dispatch(loginWithSteamToken(token))
+  }, [dispatch, searchParams])
 
   return (
     <main className="login-page">

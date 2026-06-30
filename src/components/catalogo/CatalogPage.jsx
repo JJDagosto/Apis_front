@@ -1,5 +1,4 @@
 import { useSelector } from "react-redux"
-import { useNavigate } from "react-router-dom"
 import {
   selectFilteredCatalogItems,
 } from "../../Redux/catalogoSlice"
@@ -12,7 +11,6 @@ import CatalogToolbar from "./CatalogToolbar.jsx"
 import { useCatalogCartActions } from "../../hooks/useCatalogCartActions"
 
 function CatalogPage() {
-  const navigate = useNavigate()
   const skins = useSelector(selectFilteredCatalogItems)
   const { loading, error: catalogError } = useSelector((state) => state.catalogo)
   const {
@@ -22,10 +20,6 @@ function CatalogPage() {
     isOwnPublication,
     handleCartClick,
   } = useCatalogCartActions()
-
-  const openPublication = (skinId) => {
-    navigate(`/publicacion/${skinId}`)
-  }
 
   return (
     <div className="catalogo mt-4">
@@ -48,7 +42,6 @@ function CatalogPage() {
               getCartItemBySkinId={getCartItemBySkinId}
               isOwnPublication={isOwnPublication}
               onCartClick={handleCartClick}
-              onOpenPublication={openPublication}
             />
           </div>
         </div>

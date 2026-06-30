@@ -1,6 +1,7 @@
 import "./Card.css"
 import "./Global.css"
 import { FaPen, FaShoppingCart } from "react-icons/fa"
+import { Link } from "react-router-dom"
 import useCurrencyFormatter from "../hooks/useCurrencyFormatter"
 
 const Card = ({
@@ -11,12 +12,11 @@ const Card = ({
   precioOriginal,
   descuento,
   imagen,
-  onClick,
+  to,
   addToCart,
   addingToCart,
   inCart = false,
   isOwnPublication = false,
-  onManage,
 }) => {
   const { formatPrice } = useCurrencyFormatter()
   const discountRate = Number(descuento ?? 0)
@@ -24,18 +24,20 @@ const Card = ({
   const originalPrice = Number(precioOriginal ?? precio)
 
   const handleActionClick = (event) => {
-    event.stopPropagation()
-
     if (isOwnPublication) {
-      onManage?.()
       return
     }
 
+    event.preventDefault()
+    event.stopPropagation()
     addToCart?.()
   }
 
   return (
-    <div className="card align-items-center flex-shrink-0" onClick={onClick}>
+    <Link
+      className="card align-items-center flex-shrink-0 text-decoration-none"
+      to={to}
+    >
       <div className="contenedorImagen m-3">
         <img src={imagen} className="card-img-top" alt={nombreSkin} />
       </div>
@@ -75,7 +77,7 @@ const Card = ({
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 

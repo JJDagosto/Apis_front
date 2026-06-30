@@ -1,35 +1,21 @@
 import { useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { requestPasswordReset } from "../../Redux/authSlice"
-import { actionErrorMessage, isRejectedAction } from "../../utils/reduxResult"
 import "../../pages/Login.css"
 
 function ForgotPassword({ goToLogin }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const openLogin = goToLogin ?? (() => navigate("/login"))
+  const { loading, error: authError, message } = useSelector((state) => state.auth)
   const [email, setEmail] = useState("")
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [message, setMessage] = useState("")
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     setError("")
-    setMessage("")
-    setLoading(true)
-
-    // El back responde el mismo mensaje exista o no el email (por privacidad).
-    const action = await dispatch(requestPasswordReset(email))
-    if (isRejectedAction(action)) {
-      setError(actionErrorMessage(action))
-      setLoading(false)
-      return
-    }
-
-    setMessage(action.payload || "Si el email esta registrado, te enviamos un link para cambiar la contraseña.")
-    setLoading(false)
+    dispatch(requestPasswordReset(email))
   }
 
   return (
@@ -51,7 +37,7 @@ function ForgotPassword({ goToLogin }) {
           />
         </label>
 
-        {error && <p className="login-error">{error}</p>}
+        {(error || authError) && <p className="login-error">{error || authError}</p>}
         {message && <p style={{ color: "#3bd17f", margin: 0 }}>{message}</p>}
 
         <button type="submit" disabled={loading}>

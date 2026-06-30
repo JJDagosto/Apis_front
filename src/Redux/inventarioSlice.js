@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { apiRequest } from "../api/client"
 import { logout } from "./authSlice"
+import { mostrarNotificacion } from "./notificacionesSlice"
 
 const getToken = (getState) => getState().auth.token
 
@@ -19,15 +20,23 @@ export const fetchInventario = createAsyncThunk(
 
 export const sincronizarInventario = createAsyncThunk(
   "inventario/sincronizarInventario",
-  async (_, { getState }) => {
-    const response = await apiRequest(
-      "/inventario/sync",
-      { method: "POST" },
-      getToken(getState),
-    )
-    return {
-      items: response.data ?? [],
-      message: response.message,
+  async (_, { dispatch, getState, rejectWithValue }) => {
+    try {
+      const response = await apiRequest(
+        "/inventario/sync",
+        { method: "POST" },
+        getToken(getState),
+      )
+      const message = response.message || "Inventario actualizado correctamente."
+      dispatch(mostrarNotificacion(message))
+      return {
+        items: response.data ?? [],
+        message,
+      }
+    } catch (error) {
+      const message = error?.message || "No se pudo sincronizar el inventario."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
   },
   {
@@ -39,25 +48,32 @@ export const publicarInventarioItem = createAsyncThunk(
   "inventario/publicarInventarioItem",
   async (
     { itemId, price, discount = 0, vendible = true, intercambiable = false },
-    { getState },
+    { dispatch, getState, rejectWithValue },
   ) => {
-    const response = await apiRequest(
-      `/inventario/${itemId}/publicar`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          price,
-          discount,
-          vendible,
-          intercambiable,
-        }),
-      },
-      getToken(getState),
-    )
-    return {
-      itemId,
-      skin: response.data,
-      message: response.message,
+    try {
+      const response = await apiRequest(
+        `/inventario/${itemId}/publicar`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            price,
+            discount,
+            vendible,
+            intercambiable,
+          }),
+        },
+        getToken(getState),
+      )
+      dispatch(mostrarNotificacion(response.message || "Publicacion creada correctamente."))
+      return {
+        itemId,
+        skin: response.data,
+        message: response.message,
+      }
+    } catch (error) {
+      const message = error?.message || "No se pudo publicar la skin."
+      dispatch(mostrarNotificacion(message, "error"))
+      return rejectWithValue(message)
     }
   },
   {
@@ -119,7 +135,7 @@ const inventarioSlice = createSlice({
       .addCase(sincronizarInventario.rejected, (state, action) => {
         state.syncing = false
         state.syncMessage = ""
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(publicarInventarioItem.pending, (state) => {
         state.publishing = true
@@ -136,7 +152,7 @@ const inventarioSlice = createSlice({
       })
       .addCase(publicarInventarioItem.rejected, (state, action) => {
         state.publishing = false
-        state.error = action.error.message
+        state.error = action.payload || action.error.message
       })
       .addCase(logout, (state) => {
         state.items = []
